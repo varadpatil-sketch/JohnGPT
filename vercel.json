@@ -1,11 +1,52 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 120
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/health",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/tools",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/sessions",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/sessions/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/documents",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/documents/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/chat",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/chat/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/((?!api|health|tools|sessions|documents|chat).*)",
       "destination": "/index.html"
     }
   ]
 }
-

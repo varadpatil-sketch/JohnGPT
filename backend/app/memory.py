@@ -4,7 +4,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
+DATA_DIR = Path(os.getenv("DATA_DIR", "/tmp/data" if os.getenv("VERCEL") else "data"))
 DB_PATH = DATA_DIR / "mollie.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 

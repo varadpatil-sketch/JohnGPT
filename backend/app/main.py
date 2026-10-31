@@ -3,7 +3,7 @@ import json
 import mimetypes
 import os
 from pathlib import Path
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 from app.agent import (
@@ -57,6 +57,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def handle_api_prefix(request: Request, call_next):
+    """Ensure both /api/... and direct /... routes resolve cleanly on Vercel and local."""
+    path = request.scope.get("path", "")
+    if path.startswith("/api/"):
+        request.scope["path"] = path[4:]
+    elif path == "/api":
+        request.scope["path"] = "/"
+    return await call_next(request)
 
 
 def get_frontend_dist():

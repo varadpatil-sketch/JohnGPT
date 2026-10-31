@@ -10,7 +10,7 @@ import docx
 import pymupdf
 from rank_bm25 import BM25Okapi
 
-DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
+DATA_DIR = Path(os.getenv("DATA_DIR", "/tmp/data" if os.getenv("VERCEL") else "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DOCUMENTS_DIR = DATA_DIR / "documents"

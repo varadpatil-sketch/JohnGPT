@@ -2,42 +2,53 @@
 
 This repository contains the complete full-stack **JohnGPT** application (React frontend + FastAPI backend + Conversational RAG + SQLite + ChromaDB).
 
-The app is containerized using a multi-stage `Dockerfile` where FastAPI directly serves both the API endpoints and the production React frontend build on a single port.
+Both frontend and backend are fully pre-configured to deploy together directly on **Vercel** as well as **Render**, **Railway**, or with **Docker**.
 
 ---
 
-## Prerequisites
-- A Google Gemini API Key ([Get one from Google AI Studio](https://aistudio.google.com/))
-- A free account on [Render](https://render.com/) or [Railway](https://railway.app/)
-- A GitHub repository (public or private)
+## Option 1: Deploy on Vercel (Frontend + Backend in One Project)
+
+This repository includes a native Vercel configuration (`vercel.json` + `api/index.py`):
+- **Frontend**: Vite SPA built and served from CDN edge.
+- **Backend**: FastAPI running via Vercel Python Serverless Function (`api/index.py`) on Fluid Compute with streaming support.
+
+### Step-by-Step Vercel Deployment:
+
+1. **Go to Vercel**:
+   - Open [vercel.com/new](https://vercel.com/new) and log in with your GitHub account.
+
+2. **Import Repository**:
+   - Select your repository: **`varadpatil-sketch/JohnGPT`** and click **Import**.
+
+3. **Configure Project**:
+   - **Project Name**: `johngpt` (or any name you like).
+   - **Root Directory**: Leave it as `./` (default root folder). **Do NOT** change it to `frontend` so both backend and frontend build together!
+   - **Framework Preset**: Auto-detected / Other.
+
+4. **Add Environment Variables**:
+   Expand the **Environment Variables** section and add:
+   - `GEMINI_API_KEY`: `<Your-Google-Gemini-API-Key>`
+   - `GEMINI_MODEL`: `gemini-3.5-flash-lite` (optional, default)
+
+5. **Deploy**:
+   - Click **Deploy**.
+   - Vercel will install Python dependencies, build the React frontend, and deploy the entire application to a live URL (e.g. `https://johngpt.vercel.app`)!
+
+6. **Change URL / Custom Domain** (Optional):
+   - In your Vercel Dashboard, go to **Settings** > **Domains**.
+   - Edit the `.vercel.app` subdomain or attach your own custom domain.
 
 ---
 
-## Option 1: Deploy on Render (Recommended)
+## Option 2: Deploy on Render
 
-### Step 1: Push Code to GitHub
-1. Initialize git and commit your files:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit for JohnGPT deployment"
-   ```
-2. Create a new repository on GitHub (e.g., `johngpt`).
-3. Link and push your repository:
-   ```bash
-   git remote add origin https://github.com/<your-username>/johngpt.git
-   git branch -M main
-   git push -u origin main
-   ```
-
-### Step 2: Deploy on Render
 1. Log in to your [Render Dashboard](https://dashboard.render.com/).
 2. Click **New +** > **Web Service**.
-3. Connect your GitHub repository `johngpt`.
+3. Connect your GitHub repository `JohnGPT`.
 4. Choose **Docker** as the Runtime (it will automatically detect the `Dockerfile`).
 5. In **Environment Variables**, add:
    - `GEMINI_API_KEY`: `<Your-Google-Gemini-API-Key>`
-   - `GEMINI_MODEL`: `gemini-3.5-flash-lite` (or your preferred model)
+   - `GEMINI_MODEL`: `gemini-3.5-flash-lite`
    - `DATA_DIR`: `/app/data`
 6. (Optional for data persistence across restarts): Under **Disks**, add a Persistent Disk mounted at `/app/data` (e.g. 1 GB).
 7. Click **Create Web Service**.
@@ -45,11 +56,11 @@ The app is containerized using a multi-stage `Dockerfile` where FastAPI directly
 
 ---
 
-## Option 2: Deploy on Railway
+## Option 3: Deploy on Railway
 
 1. Log in to [Railway](https://railway.app/).
 2. Click **New Project** > **Deploy from GitHub repo**.
-3. Select your `johngpt` repository.
+3. Select your `JohnGPT` repository.
 4. Railway will automatically detect the `Dockerfile` and build both the React frontend and FastAPI backend.
 5. In your project settings, click **Variables** and add:
    - `GEMINI_API_KEY`: `<Your-Google-Gemini-API-Key>`
@@ -59,7 +70,7 @@ The app is containerized using a multi-stage `Dockerfile` where FastAPI directly
 
 ---
 
-## Option 3: Run with Docker Locally or on Any VPS
+## Option 4: Run with Docker Locally or on Any VPS
 
 You can build and run the production container locally or on any server with Docker installed:
 
@@ -75,4 +86,3 @@ docker run -d -p 8010:8010 \
 ```
 
 Open [http://localhost:8010](http://localhost:8010) in your browser.
-
