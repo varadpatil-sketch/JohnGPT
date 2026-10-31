@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ListFilter,
   Sparkles,
-  Layers,
   Pin,
   Edit2,
   Trash2,
@@ -85,33 +84,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* 1. Studio Component Launcher (Above Create Conversation / New) */}
-      <div className="sidebar-studio-header-wrap">
-        <button
-          type="button"
-          className={`sidebar-studio-top-box ${activeMainView === "studio" || activeMainView === "code" ? "active" : ""}`}
-          onClick={() => {
-            setActiveNav("studio");
-            if (onOpenStudio) onOpenStudio();
-            else if (onOpenCode) onOpenCode();
-          }}
-          title="Open JohnGPT Studio Workspace (Interactive Sandbox & Apps)"
-        >
-          <div className="studio-top-icon-glow">
-            <Layers size={17} className="text-accent" />
-          </div>
-          <div className="studio-top-meta">
-            <div className="studio-top-title-row">
-              <span className="studio-top-title">Studio</span>
-              <span className="studio-top-pill">Sandbox</span>
-            </div>
-            <span className="studio-top-sub">Create web apps & code</span>
-          </div>
-          <Sparkles size={14} className="studio-top-sparkle text-accent" />
-        </button>
-      </div>
-
-      {/* 2. Top Primary Navigation List (Exact layout from reference screenshot) */}
+      {/* Primary Navigation List */}
       <div className="sidebar-primary-nav">
         {/* + New (Create Conversation) */}
         <button
