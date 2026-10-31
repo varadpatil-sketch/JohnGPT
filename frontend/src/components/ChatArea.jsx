@@ -125,6 +125,51 @@ const AVAILABLE_MODELS = [
   { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 (70B)", badge: "Meta AI · OpenRouter" },
 ];
 
+const getTimeGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Good morning! What's on your mind today?";
+  if (hour >= 12 && hour < 17) return "Good afternoon! How can I help you today?";
+  if (hour >= 17 && hour < 22) return "Good evening! What would you like to explore?";
+  return "Burning the midnight oil? How can I assist you?";
+};
+
+const getTimeHeading = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  if (hour >= 17 && hour < 22) return "Good evening";
+  return "Welcome back";
+};
+
+const DYNAMIC_GREETINGS = [
+  getTimeGreeting,
+  "What's on your mind today?",
+  "How can I help you today?",
+  "What shall we create together today?",
+  "Ask a question, brainstorm an idea, or write code...",
+  "What would you like to explore or learn today?",
+  "Ready when you are — what are we building?",
+  "Need help writing, debugging, or analyzing data?",
+  "What challenge can we tackle together today?",
+  "Have a complex problem? Let's break it down...",
+  "Curious about something? Ask away...",
+  "Start with an idea, draft, or question...",
+  "What's your primary focus for today?",
+  "Draft an essay, build an app, or solve a puzzle...",
+  "How can I assist your workflow right now?",
+  "Tell me what you're thinking about...",
+  "Where would you like to begin today?",
+  "Got an interesting project in mind?",
+  "Ready to explore some new ideas?",
+];
+
+const getRandomGreeting = (exclude = null) => {
+  const candidates = DYNAMIC_GREETINGS.map((item) => (typeof item === "function" ? item() : item)).filter(
+    (g) => g !== exclude
+  );
+  return candidates[Math.floor(Math.random() * candidates.length)] || "How can I help you today?";
+};
+
 export default function ChatArea({
   messages,
   input,
@@ -167,6 +212,23 @@ export default function ChatArea({
   const [activeMode, setActiveMode] = useState("chat");
   const [internalSelectedModel, setInternalSelectedModel] = useState("gemini-3.5-flash-lite");
   const [reasoningDepth, setReasoningDepth] = useState("Medium");
+  const [dynamicGreeting, setDynamicGreeting] = useState(() => getRandomGreeting());
+  const [timeHeading, setTimeHeading] = useState(() => getTimeHeading());
+
+  // Update dynamic greeting on session change
+  useEffect(() => {
+    setTimeHeading(getTimeHeading());
+    setDynamicGreeting((prev) => getRandomGreeting(prev));
+  }, [currentSessionId]);
+
+  // Rotate greeting every 12 seconds when chat is empty and user hasn't typed
+  useEffect(() => {
+    if (messages.length > 0 || input) return;
+    const interval = setInterval(() => {
+      setDynamicGreeting((prev) => getRandomGreeting(prev));
+    }, 12000);
+    return () => clearInterval(interval);
+  }, [messages.length, input]);
 
   const lastMessage = messages[messages.length - 1];
   const canContinue = Boolean(
@@ -469,7 +531,7 @@ export default function ChatArea({
             ? "Ask about this image..."
             : selectedDoc
             ? `Ask about ${selectedDoc.filename}...`
-            : "How can I help you today?"
+            : dynamicGreeting
         }
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -1000,7 +1062,7 @@ export default function ChatArea({
             {/* Claude-style Hero Header */}
             <div className="claude-hero-header">
               <NeonBrandIcon size={26} />
-              <h1 className="claude-serif-title">Meet JohnGPT</h1>
+              <h1 className="claude-serif-title">{timeHeading}</h1>
             </div>
 
             {/* Centered Composer Card */}
