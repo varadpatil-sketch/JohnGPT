@@ -7184,6 +7184,344 @@ input:checked + .slider:before {
   gap: 8px;
 }
 
+/* ==========================================================================
+   CHATGPT MOBILE WEBSITE RESPONSIVE SYSTEM
+   ========================================================================== */
+
+/* Desktop defaults: hide mobile top bar & drawer backdrop */
+.chatgpt-mobile-top-bar {
+  display: none !important;
+}
+
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+.btn-sidebar-mobile-close {
+  display: none;
+}
+
+.sidebar-container-wrapper {
+  height: 100vh;
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* Sidebar header brand group */
+.sidebar-brand-left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+/* Mobile Devices (Smartphones & Small Tablets <= 768px) */
+@media (max-width: 768px) {
+  /* Container height locked to dynamic viewport */
+  html, body, #root {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    position: fixed;
+  }
+
+  .app-container {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    position: relative;
+    flex-direction: column;
+  }
+
+  /* 1. ChatGPT-Style Mobile Top Bar */
+  .chatgpt-mobile-top-bar {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    min-height: 52px;
+    padding: 0 12px;
+    background: #141414;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 40;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .btn-chatgpt-mobile-menu,
+  .btn-chatgpt-mobile-new {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-chatgpt-mobile-menu:active,
+  .btn-chatgpt-mobile-new:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .chatgpt-mobile-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .chatgpt-mobile-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .chatgpt-mobile-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+
+  /* 2. Slide-out Drawer Sidebar (ChatGPT mobile style) */
+  .mobile-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(5px);
+    z-index: 120;
+  }
+
+  .sidebar-container-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 82vw;
+    max-width: 310px;
+    height: 100dvh;
+    z-index: 130;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+  }
+
+  .sidebar-container-wrapper.mobile-drawer-open {
+    transform: translateX(0);
+    box-shadow: 6px 0 30px rgba(0, 0, 0, 0.9);
+  }
+
+  .sidebar.claude-styled-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100dvh !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .btn-sidebar-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #e5e7eb;
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  .btn-sidebar-mobile-close:active {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+
+  /* 3. Main Workspace Area */
+  .main-workspace-area {
+    width: 100%;
+    height: calc(100dvh - 52px);
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 4. Chat Viewport & Messages */
+  .chat-main {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-header {
+    padding: 6px 10px;
+    min-height: 42px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .messages-viewport {
+    flex: 1;
+    min-height: 0;
+    padding: 10px 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .messages-list {
+    max-width: 100%;
+    padding: 0;
+    gap: 12px;
+  }
+
+  .message-row {
+    padding: 8px 0;
+    gap: 8px;
+  }
+
+  .message-bubble {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    padding: 10px 12px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  /* 5. Mobile Hero (Empty State) */
+  .claude-empty-container {
+    padding: 16px 10px 10px 10px;
+    gap: 12px;
+    justify-content: flex-start;
+  }
+
+  .claude-hero-header {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .claude-serif-title {
+    font-size: 1.75rem !important;
+  }
+
+  .claude-composer-wrapper {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .claude-composer-box {
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+
+  .claude-composer-textarea {
+    font-size: 0.95rem;
+    min-height: 44px;
+    max-height: 140px;
+  }
+
+  .claude-pills-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .claude-action-pill {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    justify-content: center;
+  }
+
+  /* 6. Docked Composer on Mobile */
+  .chat-input-container.is-compact-dock {
+    padding: 6px 10px max(10px, env(safe-area-inset-bottom)) 10px;
+    background: #141414;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .input-box-wrapper.compact-wrapper {
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 14px;
+  }
+
+  .claude-composer-bottom {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 6px;
+  }
+
+  .claude-tools-left {
+    gap: 4px;
+  }
+
+  .btn-claude-tool {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+
+  .btn-claude-model-chip {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-claude-depth {
+    padding: 4px 7px;
+    font-size: 0.72rem;
+  }
+
+  /* 7. Image Studio on Mobile */
+  .image-studio-workspace {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .image-studio-sidebar {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px;
+  }
+
+  .studio-canvas-card {
+    min-height: 300px;
+  }
+
+  .studio-style-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  .studio-ratio-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+}
+
+
 
 
 

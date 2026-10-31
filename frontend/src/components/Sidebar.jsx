@@ -31,6 +31,7 @@ export default function Sidebar({
   onOpenCreate,
   onOpenChat,
   onOpenCustomInstructions,
+  onCloseMobile,
   activeMainView = "chat",
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,13 +75,26 @@ export default function Sidebar({
   return (
     <aside className="sidebar claude-styled-sidebar">
       {/* Brand Header */}
-      <div className="sidebar-brand-header" onClick={onOpenChat} style={{ cursor: "pointer" }} title="JohnGPT">
-        <div className="sidebar-brand-logo-wrap">
-          <img src="/logo.png" alt="JohnGPT Logo" className="sidebar-brand-logo" />
+      <div className="sidebar-brand-header">
+        <div className="sidebar-brand-left-group" onClick={onOpenChat} style={{ cursor: "pointer" }} title="JohnGPT">
+          <div className="sidebar-brand-logo-wrap">
+            <img src="/logo.png" alt="JohnGPT Logo" className="sidebar-brand-logo" />
+          </div>
+          <div className="sidebar-brand-info">
+            <span className="sidebar-brand-name">JohnGPT</span>
+          </div>
         </div>
-        <div className="sidebar-brand-info">
-          <span className="sidebar-brand-name">JohnGPT</span>
-        </div>
+        {onCloseMobile && (
+          <button
+            type="button"
+            className="btn-sidebar-mobile-close"
+            onClick={onCloseMobile}
+            title="Close sidebar"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Primary Navigation List */}

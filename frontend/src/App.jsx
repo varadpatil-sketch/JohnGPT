@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Menu, SquarePen } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
 import DocumentViewer from "./components/DocumentViewer";
@@ -45,6 +46,7 @@ export default function App() {
   const [showVoiceModeModal, setShowVoiceModeModal] = useState(false);
   const [activeMainView, setActiveMainView] = useState("chat"); // 'chat' | 'studio'
   const [activeStudioArtifact, setActiveStudioArtifact] = useState(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const handleOpenStudio = (artifact = null) => {
     if (artifact) {
@@ -615,31 +617,102 @@ export default function App() {
 
   return (
     <div className={`app-container ${activeCitation ? "has-doc-viewer" : ""}`}>
-      <Sidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSelectSession={handleSelectSession}
-        onNewSession={handleNewSession}
-        onDeleteSession={handleDeleteSession}
-        onRenameSession={handleRenameSession}
-        onTogglePinSession={handleTogglePinSession}
-        documents={documents}
-        onUploadDocument={handleUploadDocument}
-        onDeleteDocument={handleDeleteDocument}
-        selectedDocId={selectedDocId}
-        onSelectDocId={setSelectedDocId}
-        tools={tools}
-        backendStatus={backendStatus}
-        onOpenStudio={() => handleOpenStudio()}
-        onOpenArtifacts={() => setActiveMainView("artifacts")}
-        onOpenCode={() => setActiveMainView("code")}
-        onOpenCreate={() => setActiveMainView("create")}
-        onOpenChat={() => setActiveMainView("chat")}
-        onOpenCustomInstructions={() => setShowInstructionsModal(true)}
-        activeMainView={activeMainView}
-      />
+      {/* Mobile Backdrop Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="mobile-sidebar-backdrop fade-in"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Container (Static on Desktop, Slide-over Drawer on Mobile) */}
+      <div className={`sidebar-container-wrapper ${isMobileSidebarOpen ? "mobile-drawer-open" : ""}`}>
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSelectSession={(id) => {
+            handleSelectSession(id);
+            setIsMobileSidebarOpen(false);
+          }}
+          onNewSession={() => {
+            handleNewSession();
+            setIsMobileSidebarOpen(false);
+          }}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
+          onTogglePinSession={handleTogglePinSession}
+          documents={documents}
+          onUploadDocument={handleUploadDocument}
+          onDeleteDocument={handleDeleteDocument}
+          selectedDocId={selectedDocId}
+          onSelectDocId={setSelectedDocId}
+          tools={tools}
+          backendStatus={backendStatus}
+          onOpenStudio={() => {
+            handleOpenStudio();
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenArtifacts={() => {
+            setActiveMainView("artifacts");
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenCode={() => {
+            setActiveMainView("code");
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenCreate={() => {
+            setActiveMainView("create");
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenChat={() => {
+            setActiveMainView("chat");
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenCustomInstructions={() => {
+            setShowInstructionsModal(true);
+            setIsMobileSidebarOpen(false);
+          }}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          activeMainView={activeMainView}
+        />
+      </div>
 
       <div className="main-workspace-area">
+        {/* ChatGPT Style Mobile Header Bar */}
+        <div className="chatgpt-mobile-top-bar">
+          <button
+            type="button"
+            className="btn-chatgpt-mobile-menu"
+            onClick={() => setIsMobileSidebarOpen(true)}
+            aria-label="Open sidebar"
+          >
+            <Menu size={22} />
+          </button>
+
+          <div
+            className="chatgpt-mobile-title-wrap"
+            onClick={() => {
+              setActiveMainView("chat");
+              setIsMobileSidebarOpen(false);
+            }}
+          >
+            <img src="/logo.png" alt="Logo" className="chatgpt-mobile-logo" />
+            <span className="chatgpt-mobile-title">JohnGPT</span>
+          </div>
+
+          <button
+            type="button"
+            className="btn-chatgpt-mobile-new"
+            onClick={() => {
+              setActiveMainView("chat");
+              handleNewSession();
+              setIsMobileSidebarOpen(false);
+            }}
+            aria-label="New conversation"
+          >
+            <SquarePen size={20} />
+          </button>
+        </div>
         {activeMainView === "studio" || activeMainView === "code" ? (
           <CodeStudio
             onClose={() => setActiveMainView("chat")}
