@@ -5505,6 +5505,279 @@ input:checked + .slider:before {
   transform: translateY(-1px);
 }
 
+/* Inline Rename inside Studio Header */
+.studio-inline-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.studio-rename-input {
+  background: #111113;
+  border: 1.5px solid rgba(234, 179, 8, 0.8);
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  outline: none;
+  min-width: 160px;
+  max-width: 240px;
+  transition: all 0.15s ease;
+}
+
+.btn-rename-save,
+.btn-rename-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.btn-rename-save {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.btn-rename-save:hover {
+  background: rgba(34, 197, 94, 0.35);
+  transform: scale(1.05);
+}
+
+.btn-rename-cancel {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.btn-rename-cancel:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: scale(1.05);
+}
+
+.btn-rename-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-rename-project:hover {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.55);
+  color: #fbbf24;
+}
+
+/* New Project Modal */
+.studio-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.studio-modal-card {
+  width: 100%;
+  max-width: 480px;
+  background: #141416;
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.85), 0 0 35px rgba(234, 179, 8, 0.18);
+  overflow: hidden;
+  animation: studioModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes studioModalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.studio-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.studio-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.btn-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.studio-modal-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.studio-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.studio-modal-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.studio-modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.studio-modal-input:focus {
+  border-color: rgba(234, 179, 8, 0.75);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.3);
+}
+
+.studio-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.template-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.template-card-btn:hover {
+  border-color: rgba(234, 179, 8, 0.45);
+  background: #18181c;
+  color: #ffffff;
+}
+
+.template-card-btn.selected {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.85);
+  color: #fbbf24;
+}
+
+.studio-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0e0e10;
+}
+
+.btn-modal-cancel {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.btn-modal-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  border: none;
+  color: #000000;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.35);
+  transition: all 0.15s ease;
+}
+
+.btn-modal-create:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.6);
+}
+
 .btn-delete-action:hover {
   color: #ef4444 !important;
   background: rgba(239, 68, 68, 0.15) !important;
