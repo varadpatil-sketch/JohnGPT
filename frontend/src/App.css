@@ -792,7 +792,8 @@
   box-shadow: 
     0 0 20px rgba(255, 255, 255, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.5);
-  animation: white-glow-pulse 3s ease-in-out infinite alternate;
+  animation: none !important;
+  transform: none !important;
 }
 
 @keyframes white-glow-pulse {
@@ -6366,6 +6367,9 @@ input:checked + .slider:before {
   box-shadow: 0 0 24px rgba(234, 179, 8, 0.4), 0 4px 16px rgba(0, 0, 0, 0.6) !important;
   padding: 0 !important;
   overflow: hidden !important;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 .johngpt-hero-logo {
@@ -6373,6 +6377,9 @@ input:checked + .slider:before {
   height: 100%;
   object-fit: cover;
   display: block;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 .message-bot-logo {
