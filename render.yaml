@@ -16,3 +16,4 @@ services:
         value: gemini-3.5-flash-lite
       - key: DATA_DIR
         value: /app/data
+

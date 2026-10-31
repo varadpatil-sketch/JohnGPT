@@ -41,3 +41,4 @@ EXPOSE 8010
 
 # Launch uvicorn listening on 0.0.0.0:$PORT
 CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}"]
+
