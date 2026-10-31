@@ -116,11 +116,11 @@ const QUICK_PILLS = [
   { label: "JohnGPT's choice", icon: Lightbulb, prompt: "Surprise me with something creative, thought-provoking, or fascinating today." },
 ];
 
-// Curated Top Free AI Models supported by JohnGPT
+// Curated Top AI Models supported by JohnGPT
 const AVAILABLE_MODELS = [
   { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Google AI · Ultra Fast (Default)" },
   { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Google AI · Multimodal & RAG" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", badge: "Google AI · Deep Reasoning & Coding" },
+  { id: "nano-banana-pro-preview", name: "Nano Banana Pro", badge: "Google AI · Pro Vision & Gen" },
   { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 (27B)", badge: "Code & Dev · Groq (Free)" },
   { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 (70B)", badge: "Meta AI · OpenRouter" },
 ];

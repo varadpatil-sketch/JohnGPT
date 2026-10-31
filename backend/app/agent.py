@@ -18,6 +18,9 @@ FALLBACK_MODEL = "gemini-3.5-flash" if "lite" in MODEL else "gemini-3.5-flash-li
 VALID_MODELS = {
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
+    "nano-banana-pro-preview",
+    "gemini-nano-banana-2.1",
+    "gemini-3.1-pro-preview",
     "gemini-2.5-pro",
     "qwen/qwen3.8-27b",
     "meta-llama/llama-3.3-70b-instruct:free",
@@ -41,13 +44,17 @@ client = genai.Client(api_key=API_KEY)
 
 def get_models_hierarchy(requested_model: str | None = None) -> list[str]:
     """Resolve primary and fallback models based on client request and environment configuration."""
-    if requested_model in {"gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-pro"}:
-        primary = requested_model
-        fallback = "gemini-3.5-flash-lite" if primary != "gemini-3.5-flash-lite" else "gemini-3.5-flash"
+    if requested_model in {"nano-banana-pro-preview", "gemini-nano-banana-2.1"}:
+        return [requested_model, "gemini-3.5-flash-lite", "gemini-3.5-flash"]
+    elif requested_model in {"gemini-3.1-pro-preview", "gemini-2.5-pro"}:
+        # Google superseded gemini-2.5-pro with gemini-3.1-pro-preview
+        return ["gemini-3.1-pro-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash"]
+    elif requested_model == "gemini-3.5-flash":
+        return ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
+    elif requested_model == "gemini-3.5-flash-lite":
+        return ["gemini-3.5-flash-lite", "gemini-3.5-flash"]
     else:
-        primary = "gemini-3.5-flash"
-        fallback = "gemini-3.5-flash-lite"
-    return [primary, fallback]
+        return ["gemini-3.5-flash-lite", "gemini-3.5-flash"]
 
 
 def call_groq(prompt: str, model: str) -> str | None:
@@ -215,6 +222,9 @@ def call_gemini(contents, config=None, model=None):
                         "503",
                         "unavailable",
                         "404",
+                        "429",
+                        "quota",
+                        "resource_exhausted",
                         "wsarecv",
                         "forcibly closed",
                         "stream reading error",
@@ -227,6 +237,9 @@ def call_gemini(contents, config=None, model=None):
                     )
                 )
                 if is_recoverable:
+                    # If quota, 429, or 404 deprecation, advance to the next fallback model immediately
+                    if any(k in error_msg for k in ("429", "quota", "resource_exhausted", "404")):
+                        break
                     import time
                     time.sleep(0.5)
                     continue
@@ -238,7 +251,7 @@ def call_gemini(contents, config=None, model=None):
 def call_gemini_stream(contents, config=None, model=None):
     """
     Generate content stream with resilient retry and automatic fallback.
-    Catches transient socket drops (wsarecv, stream reading error, UNAVAILABLE, 503)
+    Catches transient socket drops (wsarecv, stream reading error, UNAVAILABLE, 503, 429 quota)
     and switches to the fallback model smoothly.
     """
     models_to_try = get_models_hierarchy(model)
@@ -265,7 +278,7 @@ def call_gemini_stream(contents, config=None, model=None):
                 if yielded:
                     raise error
 
-                # Check for transient network/socket or load errors
+                # Check for transient network/socket, quota, or load errors
                 is_recoverable = any(
                     k in error_msg
                     for k in (
@@ -277,11 +290,15 @@ def call_gemini_stream(contents, config=None, model=None):
                         "503",
                         "unavailable",
                         "404",
+                        "429",
+                        "quota",
+                        "resource_exhausted",
                         "timeout",
                         "reset by peer",
                     )
                 )
-                if not is_recoverable and attempt >= 1:
+                if not is_recoverable or any(k in error_msg for k in ("429", "quota", "resource_exhausted", "404")):
+                    # Move to next model in models_to_try
                     break
                 import time
                 time.sleep(0.5)
