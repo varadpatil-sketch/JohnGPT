@@ -16,12 +16,7 @@ import {
   Check,
   X,
   Palette,
-  ExternalLink,
-  Download,
-  RefreshCw,
-  MessageSquare,
 } from "lucide-react";
-import { generateImage } from "../api";
 
 export default function Sidebar({
   sessions,
@@ -37,7 +32,6 @@ export default function Sidebar({
   onOpenCreate,
   onOpenChat,
   onOpenCustomInstructions,
-  onAttachImageToChat,
   activeMainView = "chat",
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,44 +40,6 @@ export default function Sidebar({
   const [activeNav, setActiveNav] = useState("artifacts");
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitleInput, setEditTitleInput] = useState("");
-
-  // Sidebar Create Section State
-  const [isCreateOpen, setIsCreateOpen] = useState(true);
-  const [sidebarPrompt, setSidebarPrompt] = useState("");
-  const [sidebarStyle, setSidebarStyle] = useState("Photoreal");
-  const [sidebarLoading, setSidebarLoading] = useState(false);
-  const [sidebarResult, setSidebarResult] = useState(null);
-
-  const handleSidebarGenerate = async () => {
-    if (!sidebarPrompt.trim() || sidebarLoading) return;
-    setSidebarLoading(true);
-    try {
-      const res = await generateImage({
-        prompt: sidebarPrompt.trim(),
-        style: sidebarStyle,
-        aspect_ratio: "1:1",
-      });
-      setSidebarResult(res);
-
-      try {
-        const saved = JSON.parse(localStorage.getItem("johngpt_created_images") || "[]");
-        const newEntry = {
-          id: Date.now().toString(),
-          imageUrl: res.image_url,
-          prompt: sidebarPrompt.trim(),
-          style: sidebarStyle,
-          aspectRatio: "1:1",
-          modelUsed: res.model_used,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-        localStorage.setItem("johngpt_created_images", JSON.stringify([newEntry, ...saved.slice(0, 20)]));
-      } catch {}
-    } catch (err) {
-      console.error("Sidebar image creation failed:", err);
-    } finally {
-      setSidebarLoading(false);
-    }
-  };
 
   const searchInputRef = useRef(null);
 
@@ -265,138 +221,6 @@ export default function Sidebar({
           <Briefcase size={18} className="nav-item-icon" />
           <span className="nav-item-label">Customize</span>
         </button>
-      </div>
-
-      {/* 2.5 Dedicated Sidebar Create Section (Describe and create images directly in the sidebar) */}
-      <div className="sidebar-create-section">
-        <div
-          className="sidebar-create-header"
-          onClick={() => setIsCreateOpen(!isCreateOpen)}
-          title="Toggle Image Creator"
-        >
-          <div className="sidebar-create-title-row">
-            <Palette size={14} className="text-accent" />
-            <span className="sidebar-create-title">Create</span>
-            <span className="sidebar-create-badge">Nano Banana</span>
-          </div>
-          <ChevronDown
-            size={13}
-            className={`caret-chats-arrow ${!isCreateOpen ? "collapsed" : ""}`}
-          />
-        </div>
-
-        {isCreateOpen && (
-          <div className="sidebar-create-body fade-in">
-            <div className="sidebar-create-input-wrap">
-              <textarea
-                className="sidebar-create-textarea"
-                rows={2}
-                placeholder="Describe an image to create..."
-                value={sidebarPrompt}
-                onChange={(e) => setSidebarPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSidebarGenerate();
-                  }
-                }}
-              />
-            </div>
-
-            <div className="sidebar-create-styles-row">
-              {["Photoreal", "Anime", "Cyberpunk", "3D Art"].map((style) => (
-                <button
-                  key={style}
-                  type="button"
-                  className={`sidebar-style-pill ${sidebarStyle === style ? "active" : ""}`}
-                  onClick={() => setSidebarStyle(style)}
-                >
-                  {style}
-                </button>
-              ))}
-            </div>
-
-            <div className="sidebar-create-actions-row">
-              <button
-                type="button"
-                className="btn-sidebar-create-submit"
-                disabled={sidebarLoading || !sidebarPrompt.trim()}
-                onClick={handleSidebarGenerate}
-              >
-                {sidebarLoading ? (
-                  <>
-                    <RefreshCw size={12} className="animate-spin" />
-                    <span>Creating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={12} />
-                    <span>Create</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className="btn-sidebar-create-expand"
-                onClick={() => {
-                  if (onOpenCreate) onOpenCreate();
-                }}
-                title="Open Full Image Studio"
-              >
-                <ExternalLink size={12} />
-                <span>Studio</span>
-              </button>
-            </div>
-
-            {/* If an image was created, show thumbnail card in sidebar */}
-            {sidebarResult && (
-              <div className="sidebar-create-result-card fade-in">
-                <img
-                  src={sidebarResult.image_url}
-                  alt={sidebarResult.prompt}
-                  className="sidebar-result-thumb"
-                  onClick={() => {
-                    if (onOpenCreate) onOpenCreate();
-                  }}
-                  title="Click to view in Studio"
-                />
-                <div className="sidebar-result-details">
-                  <span className="sidebar-result-prompt" title={sidebarResult.prompt}>
-                    {sidebarResult.prompt}
-                  </span>
-                  <div className="sidebar-result-actions">
-                    <button
-                      type="button"
-                      className="btn-sidebar-thumb-act"
-                      onClick={() => {
-                        const a = document.createElement("a");
-                        a.href = sidebarResult.image_url;
-                        a.download = `johngpt-sidebar-${Date.now()}.jpg`;
-                        a.click();
-                      }}
-                      title="Download image"
-                    >
-                      <Download size={11} />
-                    </button>
-                    {onAttachImageToChat && (
-                      <button
-                        type="button"
-                        className="btn-sidebar-thumb-act highlight"
-                        onClick={() => {
-                          onAttachImageToChat(sidebarResult.image_url, sidebarResult.prompt);
-                        }}
-                        title="Discuss in Chat"
-                      >
-                        <MessageSquare size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 3. Section Header: Chats and tasks ▾ */}

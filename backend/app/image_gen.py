@@ -157,3 +157,4 @@ def generate_image_pipeline(
     fallback_res["aspect_ratio"] = aspect_ratio
     fallback_res["style"] = style or "Default"
     return fallback_res
+

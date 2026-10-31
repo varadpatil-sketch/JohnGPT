@@ -636,11 +636,6 @@ export default function App() {
         onOpenCreate={() => setActiveMainView("create")}
         onOpenChat={() => setActiveMainView("chat")}
         onOpenCustomInstructions={() => setShowInstructionsModal(true)}
-        onAttachImageToChat={(imgUrl, prompt) => {
-          setActiveMainView("chat");
-          setAttachedImage(imgUrl);
-          setInput(prompt ? `Discuss this created image: "${prompt}"` : "Analyze this image");
-        }}
         activeMainView={activeMainView}
       />
 

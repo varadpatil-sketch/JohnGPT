@@ -554,3 +554,4 @@ export default function ImageStudio({ onClose, onSendToChat, initialPrompt = "" 
     </div>
   );
 }
+
