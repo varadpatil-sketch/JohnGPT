@@ -1041,6 +1041,38 @@
   color: #94a3b8;
 }
 
+/* Reasoning Depth Selector */
+.depth-menu-wrapper {
+  position: relative;
+}
+
+.btn-claude-depth {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-claude-depth:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.model-depth-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 /* Dictation Mic Button with Caret */
 .btn-claude-mic {
   background: transparent;
@@ -1275,7 +1307,7 @@
 /* Neon Popover Dropdowns */
 .claude-dropdown-menu {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 8px);
   z-index: 120;
   background: #1e1e1e;
   backdrop-filter: blur(20px);
@@ -1288,15 +1320,9 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: min(440px, 80vh);
+  max-height: 250px;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-/* When on the hero screen, pop downwards so items are never pushed off the top edge of the browser */
-.claude-empty-container .claude-dropdown-menu {
-  top: calc(100% + 10px);
-  bottom: auto;
 }
 
 .claude-dropdown-menu.attach-dropdown {
@@ -1307,6 +1333,11 @@
 .claude-dropdown-menu.model-dropdown {
   right: 0;
   min-width: 260px;
+}
+
+.claude-dropdown-menu.depth-dropdown {
+  right: 0;
+  min-width: 140px;
 }
 
 .claude-dropdown-menu .dropdown-menu-item {
@@ -1810,7 +1841,8 @@
 }
 
 /* Compact model pill button */
-.btn-compact-model {
+.btn-compact-model,
+.btn-compact-depth {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1827,7 +1859,8 @@
   white-space: nowrap;
 }
 
-.btn-compact-model:hover {
+.btn-compact-model:hover,
+.btn-compact-depth:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.18);

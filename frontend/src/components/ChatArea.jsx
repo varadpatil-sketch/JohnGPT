@@ -121,8 +121,6 @@ const AVAILABLE_MODELS = [
   { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Google AI · Ultra Fast (Default)" },
   { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Google AI · Multimodal & RAG" },
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", badge: "Google AI · Deep Reasoning & Coding" },
-  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", name: "NVIDIA Nemotron (550B)", badge: "Flagship Giant · OpenRouter (Free)" },
-  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B", badge: "Deep Reasoning · Groq (Free)" },
   { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 (27B)", badge: "Code & Dev · Groq (Free)" },
   { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 (70B)", badge: "Meta AI · OpenRouter" },
 ];
@@ -164,6 +162,7 @@ export default function ChatArea({
   const [isListening, setIsListening] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showDepthMenu, setShowDepthMenu] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [activeMode, setActiveMode] = useState("chat");
   const [internalSelectedModel, setInternalSelectedModel] = useState("gemini-3.5-flash-lite");
@@ -187,6 +186,7 @@ export default function ChatArea({
 
   const attachMenuRef = useRef(null);
   const modelMenuRef = useRef(null);
+  const depthMenuRef = useRef(null);
 
   const handleToggleDictation = () => {
     if (!isSpeechRecognitionSupported()) {
@@ -283,6 +283,9 @@ export default function ChatArea({
       }
       if (modelMenuRef.current && !modelMenuRef.current.contains(event.target)) {
         setShowModelMenu(false);
+      }
+      if (depthMenuRef.current && !depthMenuRef.current.contains(event.target)) {
+        setShowDepthMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -535,24 +538,26 @@ export default function ChatArea({
 
         {/* Right Side: Model & Depth, Mic, Voice Waveform, Send/Stop */}
         <div className="controls-right">
-          {/* Model & Depth selector */}
+          {/* Model selector */}
           <div className="model-menu-wrapper" ref={modelMenuRef}>
             <button
               type="button"
               className="btn-claude-model"
-              onClick={() => setShowModelMenu(!showModelMenu)}
-              title="Select Active Gemini Model & Reasoning Depth"
+              onClick={() => {
+                setShowModelMenu(!showModelMenu);
+                setShowDepthMenu(false);
+              }}
+              title="Select AI Model"
             >
               <span className="model-name">
                 {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash Lite"}
               </span>
-              <span className="model-depth">{reasoningDepth}</span>
               <ChevronDown size={11} className="model-caret" />
             </button>
 
             {showModelMenu && (
               <div className="claude-dropdown-menu model-dropdown fade-in">
-                <div className="dropdown-section-title">Select AI Intelligence Model</div>
+                <div className="dropdown-section-title">Select AI Model</div>
                 {AVAILABLE_MODELS.map((m) => (
                   <button
                     key={m.id}
@@ -570,7 +575,27 @@ export default function ChatArea({
                     {currentModelId === m.id && <Check size={14} className="text-accent" />}
                   </button>
                 ))}
-                <div className="dropdown-divider" />
+              </div>
+            )}
+          </div>
+
+          {/* Separate Reasoning Effort selector */}
+          <div className="depth-menu-wrapper" ref={depthMenuRef}>
+            <button
+              type="button"
+              className="btn-claude-depth"
+              onClick={() => {
+                setShowDepthMenu(!showDepthMenu);
+                setShowModelMenu(false);
+              }}
+              title="Select Reasoning Effort"
+            >
+              <span className="model-depth-label">{reasoningDepth}</span>
+              <ChevronDown size={11} className="model-caret" />
+            </button>
+
+            {showDepthMenu && (
+              <div className="claude-dropdown-menu depth-dropdown fade-in">
                 <div className="dropdown-section-title">Reasoning Effort</div>
                 {["Fast", "Medium", "Extended"].map((d) => (
                   <button
@@ -579,7 +604,7 @@ export default function ChatArea({
                     className={`dropdown-menu-item ${reasoningDepth === d ? "selected" : ""}`}
                     onClick={() => {
                       setReasoningDepth(d);
-                      setShowModelMenu(false);
+                      setShowDepthMenu(false);
                     }}
                   >
                     <span>{d}</span>
@@ -729,18 +754,21 @@ export default function ChatArea({
           <button
             type="button"
             className="btn-compact-model"
-            onClick={() => setShowModelMenu(!showModelMenu)}
-            title="Select Active Gemini Model & Reasoning Depth"
+            onClick={() => {
+              setShowModelMenu(!showModelMenu);
+              setShowDepthMenu(false);
+            }}
+            title="Select AI Model"
           >
             <span className="compact-model-name">
-              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash"}
+              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash Lite"}
             </span>
             <ChevronDown size={11} className="model-caret" />
           </button>
 
           {showModelMenu && (
             <div className="claude-dropdown-menu model-dropdown fade-in">
-              <div className="dropdown-section-title">Select AI Intelligence Model</div>
+              <div className="dropdown-section-title">Select AI Model</div>
               {AVAILABLE_MODELS.map((m) => (
                 <button
                   key={m.id}
@@ -758,7 +786,27 @@ export default function ChatArea({
                   {currentModelId === m.id && <Check size={14} className="text-accent" />}
                 </button>
               ))}
-              <div className="dropdown-divider" />
+            </div>
+          )}
+        </div>
+
+        {/* Compact Reasoning Depth Selector */}
+        <div className="depth-menu-wrapper" ref={depthMenuRef}>
+          <button
+            type="button"
+            className="btn-compact-depth"
+            onClick={() => {
+              setShowDepthMenu(!showDepthMenu);
+              setShowModelMenu(false);
+            }}
+            title="Select Reasoning Effort"
+          >
+            <span className="compact-depth-name">{reasoningDepth}</span>
+            <ChevronDown size={11} className="model-caret" />
+          </button>
+
+          {showDepthMenu && (
+            <div className="claude-dropdown-menu depth-dropdown fade-in">
               <div className="dropdown-section-title">Reasoning Effort</div>
               {["Fast", "Medium", "Extended"].map((d) => (
                 <button
@@ -767,7 +815,7 @@ export default function ChatArea({
                   className={`dropdown-menu-item ${reasoningDepth === d ? "selected" : ""}`}
                   onClick={() => {
                     setReasoningDepth(d);
-                    setShowModelMenu(false);
+                    setShowDepthMenu(false);
                   }}
                 >
                   <span>{d}</span>

@@ -19,22 +19,16 @@ VALID_MODELS = {
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "gemini-2.5-pro",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
     "qwen/qwen3.8-27b",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
 }
 
 GROQ_MODELS = {
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
     "qwen/qwen3.8-27b",
 }
 
 OPENROUTER_MODELS = {
     "meta-llama/llama-3.3-70b-instruct:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
 }
 
 if not API_KEY:
@@ -531,8 +525,6 @@ Instructions:
             if groq_ans:
                 return {"answer": groq_ans, "tool_used": None}
         friendly_name = {
-            "openai/gpt-oss-120b": "GPT-OSS 120B",
-            "openai/gpt-oss-20b": "GPT-OSS 20B",
             "qwen/qwen3.8-27b": "Qwen 3.8 (27B)",
         }.get(model, model)
         prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To run via Groq, add `GROQ_API_KEY` to `backend/.env` (Free at [console.groq.com](https://console.groq.com)). Fulfilling via **Gemini 3.5 Flash**:\n\n"
@@ -545,7 +537,6 @@ Instructions:
                 return {"answer": or_ans, "tool_used": None}
         friendly_name = {
             "meta-llama/llama-3.3-70b-instruct:free": "Llama 3.3 (70B)",
-            "nvidia/nemotron-3-ultra-550b-a55b:free": "NVIDIA Nemotron 3 (550B)",
         }.get(model, "OpenRouter Model")
         prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To run directly via OpenRouter, add `OPENROUTER_API_KEY` to `backend/.env` (Free at [openrouter.ai](https://openrouter.ai)). Fulfilling via **Gemini 3.5 Flash**:\n\n"
         model = "gemini-3.5-flash"
@@ -722,8 +713,6 @@ Instructions:
                 return
 
         friendly_name = {
-            "openai/gpt-oss-120b": "GPT-OSS 120B",
-            "openai/gpt-oss-20b": "GPT-OSS 20B",
             "qwen/qwen3.8-27b": "Qwen 3.8 (27B)",
         }.get(model, model)
         prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To stream directly from Groq, add `GROQ_API_KEY` to `backend/.env` (Free at [console.groq.com](https://console.groq.com)).\n> \n> Fulfilling your request below via **Gemini 3.5 Flash**:\n\n"
@@ -749,7 +738,6 @@ Instructions:
 
         friendly_name = {
             "meta-llama/llama-3.3-70b-instruct:free": "Llama 3.3 (70B)",
-            "nvidia/nemotron-3-ultra-550b-a55b:free": "NVIDIA Nemotron 3 (550B)",
         }.get(model, "OpenRouter Model")
         prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To stream directly from OpenRouter, add `OPENROUTER_API_KEY` to `backend/.env` (Free at [openrouter.ai](https://openrouter.ai)).\n> \n> Fulfilling your request below via **Gemini 3.5 Flash**:\n\n"
         yield {"type": "token", "text": prefix}
