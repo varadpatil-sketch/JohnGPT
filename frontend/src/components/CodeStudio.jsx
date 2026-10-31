@@ -42,11 +42,11 @@ const STUDIO_MODES = [
 ];
 
 const INSPIRATION_PILLS = [
-  { label: "Create a website", icon: Globe, color: "text-cyan", prompt: "Create a sleek, modern landing page with dark theme, responsive navigation, hero section, interactive pricing calculator, and testimonials" },
-  { label: "Create an app", icon: Smartphone, color: "text-purple", prompt: "Build a responsive mobile-first productivity web app with interactive task boards, progress metrics, and localStorage persistence" },
-  { label: "Create a game", icon: Gamepad2, color: "text-amber", prompt: "Create an interactive arcade game with smooth HTML5 canvas animations, sound synthesis, collision detection, and high score tracking" },
-  { label: "Three.js 3D scenes", icon: Atom, color: "text-emerald", prompt: "Create an interactive 3D scene using Three.js with glowing planetary orbits, dynamic particle fields, and smooth mouse-controlled camera orbit" },
-  { label: "Data dashboard", icon: BarChart3, color: "text-rose", prompt: "Build an executive analytics dashboard with dark glassmorphic cards, real-time KPI metrics, interactive SVG charts, and search filters" },
+  { label: "Create a website", icon: Globe, color: "text-cyan", prompt: "Create a modern, responsive website for: " },
+  { label: "Create an app", icon: Smartphone, color: "text-purple", prompt: "Build an interactive web application for: " },
+  { label: "Create a game", icon: Gamepad2, color: "text-amber", prompt: "Create an interactive game: " },
+  { label: "Three.js 3D scenes", icon: Atom, color: "text-emerald", prompt: "Create an interactive 3D scene using Three.js featuring: " },
+  { label: "Data dashboard", icon: BarChart3, color: "text-rose", prompt: "Build an executive analytics dashboard displaying: " },
 ];
 
 const createBlankProject = () => ({
@@ -806,6 +806,17 @@ Design rules:
     handleGenerate(text);
   };
 
+  const handlePillClick = (starterPrompt) => {
+    setHeroPrompt(starterPrompt);
+    setTimeout(() => {
+      if (heroTextareaRef.current) {
+        heroTextareaRef.current.focus();
+        heroTextareaRef.current.selectionStart = heroTextareaRef.current.value.length;
+        heroTextareaRef.current.selectionEnd = heroTextareaRef.current.value.length;
+      }
+    }, 50);
+  };
+
   const handleToggleDictation = () => {
     if (!isSpeechRecognitionSupported()) {
       alert("Speech recognition is not supported in this browser.");
@@ -1113,7 +1124,7 @@ Design rules:
                     key={pill.label}
                     type="button"
                     className="studio-skill-chip"
-                    onClick={() => handleHeroSubmit(pill.prompt)}
+                    onClick={() => handlePillClick(pill.prompt)}
                   >
                     <Icon size={16} className={`skill-icon ${pill.color}`} />
                     <span>{pill.label}</span>
@@ -1125,9 +1136,7 @@ Design rules:
               type="button"
               className="studio-skills-nav-btn"
               onClick={() =>
-                handleHeroSubmit(
-                  "Build a creative, highly interactive modern web application with animations, sound, and polished UI components"
-                )
+                handlePillClick("Build an interactive web application that: ")
               }
               title="More prompt ideas"
             >

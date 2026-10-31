@@ -513,7 +513,9 @@ Instructions:
 - Use `get_weather` when asked about current weather or temperature in any location.
 - Never claim that a tool ran unless it actually ran.
 {source_rule}
-- When asked to create, code, or build interactive web apps, games, tools, calculators, dashboards, or diagrams, provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
+- When asked to create, code, or build a game, app, or website:
+  * If the request is generic or lacks details (such as just "create a game", "build an app", or "make a website" without specifying the genre, gameplay, theme, or rules), do NOT generate code immediately. Instead, enthusiastically ask 2-3 quick questions or propose 3-4 distinct options (e.g., 2D Car Racing, Retro Space Shooter, Cyberpunk Snake, or Platformer) to clarify what they want to build.
+  * Once specific details, a game genre, or mechanics are provided (e.g., "car racing game with arrow keys"), provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
 - Never invent tool results or sources.
 """
 
@@ -691,7 +693,9 @@ Instructions:
 - Never claim that a tool ran unless it actually ran.
 {source_rule}
 - When presenting mathematical formulas or calculations, format equations cleanly using standard markdown (e.g., 1/2 or a/b) or standard LaTeX enclosed in single dollar signs ($...$) for inline math and double dollar signs ($$...$$) for block math. Never output raw LaTeX commands like \frac outside of math delimiters.
-- When asked to create, code, or build interactive web apps, games, tools, calculators, dashboards, or diagrams, provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
+- When asked to create, code, or build a game, app, or website:
+  * If the request is generic or lacks details (such as just "create a game", "build an app", or "make a website" without specifying the genre, gameplay, theme, or rules), do NOT generate code immediately. Instead, enthusiastically ask 2-3 quick questions or propose 3-4 distinct options (e.g., 2D Car Racing, Retro Space Shooter, Cyberpunk Snake, or Platformer) to clarify what they want to build.
+  * Once specific details, a game genre, or mechanics are provided (e.g., "car racing game with arrow keys"), provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
 - Never invent tool results or sources.
 """
 
