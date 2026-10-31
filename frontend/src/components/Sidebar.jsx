@@ -80,7 +80,6 @@ export default function Sidebar({
         </div>
         <div className="sidebar-brand-info">
           <span className="sidebar-brand-name">JohnGPT</span>
-          <span className="sidebar-brand-badge">Gemini 3.5</span>
         </div>
       </div>
 
@@ -148,7 +147,6 @@ export default function Sidebar({
         >
           <Palette size={18} className="nav-item-icon text-accent" />
           <span className="nav-item-label">Create</span>
-          <span className="nav-upgrade-badge" style={{ background: "rgba(234, 179, 8, 0.15)", color: "#facc15" }}>Images</span>
         </button>
 
         {/* Studio (Unified Web App & Code Builder) */}
@@ -164,7 +162,6 @@ export default function Sidebar({
         >
           <Code2 size={18} className="nav-item-icon text-accent" />
           <span className="nav-item-label">Studio</span>
-          <span className="nav-upgrade-badge">AI Builder</span>
         </button>
 
         {/* Artifacts (Dedicated Artifacts view) */}
