@@ -1,5 +1,7 @@
+import json
 import os
 from pathlib import Path
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -13,7 +15,26 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 FALLBACK_MODEL = "gemini-3.5-flash" if "lite" in MODEL else "gemini-3.5-flash-lite"
-VALID_MODELS = {"gemini-3.5-flash-lite", "gemini-3.5-flash"}
+VALID_MODELS = {
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+}
+
+GROQ_MODELS = {
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b",
+}
+
+OPENROUTER_MODELS = {
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+}
 
 if not API_KEY:
     raise RuntimeError(
@@ -25,9 +46,157 @@ client = genai.Client(api_key=API_KEY)
 
 def get_models_hierarchy(requested_model: str | None = None) -> list[str]:
     """Resolve primary and fallback models based on client request and environment configuration."""
-    primary = requested_model if requested_model in VALID_MODELS else MODEL
-    fallback = "gemini-3.5-flash" if "lite" in primary else "gemini-3.5-flash-lite"
+    if requested_model in {"gemini-3.5-flash-lite", "gemini-3.5-flash"}:
+        primary = requested_model
+        fallback = "gemini-3.5-flash" if "lite" in primary else "gemini-3.5-flash-lite"
+    else:
+        primary = "gemini-3.5-flash"
+        fallback = "gemini-3.5-flash-lite"
     return [primary, fallback]
+
+
+def call_groq(prompt: str, model: str) -> str | None:
+    """Call Groq API for fast execution of open-source models."""
+    key = os.getenv("GROQ_API_KEY")
+    if not key:
+        return None
+    try:
+        with httpx.Client(timeout=60.0) as http_client:
+            resp = http_client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": "You are JohnGPT, a helpful personal AI assistant."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.6,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"Groq API call error: {e}")
+    return None
+
+
+def call_groq_stream(prompt: str, model: str):
+    """Stream response tokens from Groq API."""
+    key = os.getenv("GROQ_API_KEY")
+    if not key:
+        return
+    try:
+        with httpx.Client(timeout=90.0) as http_client:
+            with http_client.stream(
+                "POST",
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": "You are JohnGPT, a helpful personal AI assistant."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "stream": True,
+                    "temperature": 0.6,
+                },
+            ) as resp:
+                if resp.status_code != 200:
+                    return
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                            if delta:
+                                yield delta
+                        except Exception:
+                            continue
+    except Exception as e:
+        print(f"Groq stream error: {e}")
+
+
+def call_openrouter(prompt: str, model: str) -> str | None:
+    """Call OpenRouter API for free models like Llama 3.3 (70B)."""
+    key = os.getenv("OPENROUTER_API_KEY")
+    if not key:
+        return None
+    try:
+        with httpx.Client(timeout=60.0) as http_client:
+            resp = http_client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "HTTP-Referer": "https://johngpt.vercel.app",
+                    "X-Title": "JohnGPT",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": "You are JohnGPT, a helpful personal AI assistant."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.6,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            else:
+                print(f"OpenRouter returned status {resp.status_code}: {resp.text}")
+    except Exception as e:
+        print(f"OpenRouter API call error: {e}")
+    return None
+
+
+def call_openrouter_stream(prompt: str, model: str):
+    """Stream response tokens from OpenRouter API."""
+    key = os.getenv("OPENROUTER_API_KEY")
+    if not key:
+        return
+    try:
+        with httpx.Client(timeout=90.0) as http_client:
+            with http_client.stream(
+                "POST",
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "HTTP-Referer": "https://johngpt.vercel.app",
+                    "X-Title": "JohnGPT",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": "You are JohnGPT, a helpful personal AI assistant."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "stream": True,
+                    "temperature": 0.6,
+                },
+            ) as resp:
+                if resp.status_code != 200:
+                    return
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                            if delta:
+                                yield delta
+                        except Exception:
+                            continue
+    except Exception as e:
+        print(f"OpenRouter stream error: {e}")
 
 
 def call_gemini(contents, config=None, model=None):
@@ -56,6 +225,10 @@ def call_gemini(contents, config=None, model=None):
                         "stream reading error",
                         "timeout",
                         "reset by peer",
+                        "10053",
+                        "aborted",
+                        "readerror",
+                        "connection",
                     )
                 )
                 if is_recoverable:
@@ -349,6 +522,33 @@ Instructions:
 - Never invent tool results or sources.
 """
 
+    prefix = ""
+    if model in GROQ_MODELS:
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            groq_ans = call_groq(prompt, model)
+            if groq_ans:
+                return {"answer": groq_ans, "tool_used": None}
+        friendly_name = {
+            "openai/gpt-oss-120b": "GPT-OSS 120B",
+            "openai/gpt-oss-20b": "GPT-OSS 20B",
+            "qwen/qwen3.8-27b": "Qwen 3.8 (27B)",
+        }.get(model, model)
+        prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To run via Groq, add `GROQ_API_KEY` to `backend/.env` (Free at [console.groq.com](https://console.groq.com)). Fulfilling via **Gemini 3.5 Flash**:\n\n"
+        model = "gemini-3.5-flash"
+    elif model in OPENROUTER_MODELS:
+        or_key = os.getenv("OPENROUTER_API_KEY")
+        if or_key:
+            or_ans = call_openrouter(prompt, model)
+            if or_ans:
+                return {"answer": or_ans, "tool_used": None}
+        friendly_name = {
+            "meta-llama/llama-3.3-70b-instruct:free": "Llama 3.3 (70B)",
+            "nvidia/nemotron-3-ultra-550b-a55b:free": "NVIDIA Nemotron 3 (550B)",
+        }.get(model, "OpenRouter Model")
+        prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To run directly via OpenRouter, add `OPENROUTER_API_KEY` to `backend/.env` (Free at [openrouter.ai](https://openrouter.ai)). Fulfilling via **Gemini 3.5 Flash**:\n\n"
+        model = "gemini-3.5-flash"
+
     user_parts = [types.Part.from_text(text=prompt)]
     if image_bytes:
         user_parts.append(
@@ -401,7 +601,7 @@ Instructions:
                 answer = "I couldn't generate a response. Please try again."
 
             return {
-                "answer": answer,
+                "answer": prefix + answer,
                 "tool_used": tool_used,
             }
 
@@ -502,6 +702,57 @@ Instructions:
 - When asked to create, code, or build interactive web apps, games, tools, calculators, dashboards, or diagrams, provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
 - Never invent tool results or sources.
 """
+
+    if model in GROQ_MODELS:
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            groq_text = ""
+            streamed = False
+            for chunk in call_groq_stream(prompt, model):
+                streamed = True
+                groq_text += chunk
+                yield {"type": "token", "text": chunk}
+            if streamed:
+                yield {
+                    "type": "done",
+                    "answer": groq_text.strip(),
+                    "tool_used": None,
+                }
+                return
+
+        friendly_name = {
+            "openai/gpt-oss-120b": "GPT-OSS 120B",
+            "openai/gpt-oss-20b": "GPT-OSS 20B",
+            "qwen/qwen3.8-27b": "Qwen 3.8 (27B)",
+        }.get(model, model)
+        prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To stream directly from Groq, add `GROQ_API_KEY` to `backend/.env` (Free at [console.groq.com](https://console.groq.com)).\n> \n> Fulfilling your request below via **Gemini 3.5 Flash**:\n\n"
+        yield {"type": "token", "text": prefix}
+        model = "gemini-3.5-flash"
+
+    elif model in OPENROUTER_MODELS:
+        or_key = os.getenv("OPENROUTER_API_KEY")
+        if or_key:
+            or_text = ""
+            streamed = False
+            for chunk in call_openrouter_stream(prompt, model):
+                streamed = True
+                or_text += chunk
+                yield {"type": "token", "text": chunk}
+            if streamed:
+                yield {
+                    "type": "done",
+                    "answer": or_text.strip(),
+                    "tool_used": None,
+                }
+                return
+
+        friendly_name = {
+            "meta-llama/llama-3.3-70b-instruct:free": "Llama 3.3 (70B)",
+            "nvidia/nemotron-3-ultra-550b-a55b:free": "NVIDIA Nemotron 3 (550B)",
+        }.get(model, "OpenRouter Model")
+        prefix = f"> 💡 **Notice:** You selected **{friendly_name}**. To stream directly from OpenRouter, add `OPENROUTER_API_KEY` to `backend/.env` (Free at [openrouter.ai](https://openrouter.ai)).\n> \n> Fulfilling your request below via **Gemini 3.5 Flash**:\n\n"
+        yield {"type": "token", "text": prefix}
+        model = "gemini-3.5-flash"
 
     user_parts = [types.Part.from_text(text=prompt)]
     if image_bytes:

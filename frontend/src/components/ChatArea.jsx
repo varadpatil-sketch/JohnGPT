@@ -56,8 +56,40 @@ class MessageItemErrorBoundary extends React.Component {
 // JohnGPT Brand Emblem / Logo Icon
 function NeonBrandIcon({ size = 48 }) {
   return (
-    <div className="neon-hero-icon johngpt-hero-icon">
-      <img src="/logo.png" alt="JohnGPT" className="johngpt-hero-logo" />
+    <div
+      className="johngpt-hero-icon johngpt-hero-icon-static"
+      style={{
+        width: "64px",
+        height: "64px",
+        borderRadius: "50%",
+        background: "#121212",
+        border: "2px solid rgba(234, 179, 8, 0.6)",
+        boxShadow: "0 0 24px rgba(234, 179, 8, 0.4), 0 4px 16px rgba(0, 0, 0, 0.6)",
+        padding: 0,
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        animation: "none",
+        transform: "none",
+        transition: "none",
+      }}
+    >
+      <img
+        src="/logo.png"
+        alt="JohnGPT"
+        className="johngpt-hero-logo johngpt-hero-logo-static"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          animation: "none",
+          transform: "none",
+          transition: "none",
+        }}
+      />
     </div>
   );
 }
@@ -84,10 +116,14 @@ const QUICK_PILLS = [
   { label: "JohnGPT's choice", icon: Lightbulb, prompt: "Surprise me with something creative, thought-provoking, or fascinating today." },
 ];
 
-// Active Gemini Models Mollie actually uses
+// Curated Top Free AI Models supported by JohnGPT
 const AVAILABLE_MODELS = [
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Default · Ultra Fast" },
-  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "High Intelligence & Depth" },
+  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Default · Ultra Fast (Free)" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Balanced · Multimodal RAG (Free)" },
+  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", name: "NVIDIA Nemotron (550B)", badge: "Flagship Giant · OpenRouter (Free)" },
+  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B", badge: "Deep Reasoning · Groq (Free)" },
+  { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 (27B)", badge: "Code & Dev · Groq (Free)" },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 (70B)", badge: "Meta AI · OpenRouter" },
 ];
 
 export default function ChatArea({
@@ -515,7 +551,7 @@ export default function ChatArea({
 
             {showModelMenu && (
               <div className="claude-dropdown-menu model-dropdown fade-in">
-                <div className="dropdown-section-title">Active Models (Gemini Engine)</div>
+                <div className="dropdown-section-title">Select AI Intelligence Model</div>
                 {AVAILABLE_MODELS.map((m) => (
                   <button
                     key={m.id}
@@ -703,7 +739,7 @@ export default function ChatArea({
 
           {showModelMenu && (
             <div className="claude-dropdown-menu model-dropdown fade-in">
-              <div className="dropdown-section-title">Active Models (Gemini Engine)</div>
+              <div className="dropdown-section-title">Select AI Intelligence Model</div>
               {AVAILABLE_MODELS.map((m) => (
                 <button
                   key={m.id}

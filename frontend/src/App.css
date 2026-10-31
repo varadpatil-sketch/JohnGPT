@@ -797,18 +797,33 @@
 }
 
 @keyframes white-glow-pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 
-      0 0 16px rgba(255, 255, 255, 0.3),
-      0 4px 12px rgba(0, 0, 0, 0.5);
+  0%, 100% {
+    transform: none !important;
   }
-  100% {
-    transform: scale(1.04);
-    box-shadow: 
-      0 0 26px rgba(255, 255, 255, 0.6),
-      0 6px 18px rgba(0, 0, 0, 0.6);
-  }
+}
+
+.johngpt-hero-icon-static {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: #121212 !important;
+  border: 2px solid rgba(234, 179, 8, 0.6) !important;
+  box-shadow: 0 0 24px rgba(234, 179, 8, 0.4), 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.johngpt-hero-logo-static {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 .neon-sparkle-icon {
