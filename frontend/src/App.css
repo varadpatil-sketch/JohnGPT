@@ -1288,6 +1288,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: min(440px, 80vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* When on the hero screen, pop downwards so items are never pushed off the top edge of the browser */
+.claude-empty-container .claude-dropdown-menu {
+  top: calc(100% + 10px);
+  bottom: auto;
 }
 
 .claude-dropdown-menu.attach-dropdown {

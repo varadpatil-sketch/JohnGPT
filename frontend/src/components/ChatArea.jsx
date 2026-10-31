@@ -118,8 +118,9 @@ const QUICK_PILLS = [
 
 // Curated Top Free AI Models supported by JohnGPT
 const AVAILABLE_MODELS = [
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Default · Ultra Fast (Free)" },
-  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Balanced · Multimodal RAG (Free)" },
+  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Google AI · Ultra Fast (Default)" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Google AI · Multimodal & RAG" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", badge: "Google AI · Deep Reasoning & Coding" },
   { id: "nvidia/nemotron-3-ultra-550b-a55b:free", name: "NVIDIA Nemotron (550B)", badge: "Flagship Giant · OpenRouter (Free)" },
   { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B", badge: "Deep Reasoning · Groq (Free)" },
   { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 (27B)", badge: "Code & Dev · Groq (Free)" },
@@ -732,7 +733,7 @@ export default function ChatArea({
             title="Select Active Gemini Model & Reasoning Depth"
           >
             <span className="compact-model-name">
-              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name.replace("Gemini ", "") || "3.5 Flash"}
+              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash"}
             </span>
             <ChevronDown size={11} className="model-caret" />
           </button>

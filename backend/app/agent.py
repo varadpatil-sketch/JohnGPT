@@ -18,6 +18,7 @@ FALLBACK_MODEL = "gemini-3.5-flash" if "lite" in MODEL else "gemini-3.5-flash-li
 VALID_MODELS = {
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
+    "gemini-2.5-pro",
     "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
     "qwen/qwen3.8-27b",
@@ -46,9 +47,9 @@ client = genai.Client(api_key=API_KEY)
 
 def get_models_hierarchy(requested_model: str | None = None) -> list[str]:
     """Resolve primary and fallback models based on client request and environment configuration."""
-    if requested_model in {"gemini-3.5-flash-lite", "gemini-3.5-flash"}:
+    if requested_model in {"gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-pro"}:
         primary = requested_model
-        fallback = "gemini-3.5-flash" if "lite" in primary else "gemini-3.5-flash-lite"
+        fallback = "gemini-3.5-flash-lite" if primary != "gemini-3.5-flash-lite" else "gemini-3.5-flash"
     else:
         primary = "gemini-3.5-flash"
         fallback = "gemini-3.5-flash-lite"
