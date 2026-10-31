@@ -2,15 +2,16 @@
 
 This repository contains the complete full-stack **JohnGPT** application (React frontend + FastAPI backend + Conversational RAG + SQLite + ChromaDB).
 
-Both frontend and backend are fully pre-configured to deploy together directly on **Vercel** as well as **Render**, **Railway**, or with **Docker**.
+Both frontend and backend are pre-configured to deploy together directly on **Vercel Services** as well as **Render**, **Railway**, or with **Docker**.
 
 ---
 
-## Option 1: Deploy on Vercel (Frontend + Backend in One Project)
+## Option 1: Deploy on Vercel Services (Multi-Service Project)
 
-This repository includes a native Vercel configuration (`vercel.json` + `api/index.py`):
-- **Frontend**: Vite SPA built and served from CDN edge.
-- **Backend**: FastAPI running via Vercel Python Serverless Function (`api/index.py`) on Fluid Compute with streaming support.
+This repository includes a multi-service Vercel configuration ([`vercel.json`](file:///c:/Users/varad/mollie/vercel.json)):
+- **Frontend Service**: React + Vite SPA built from `frontend/`, served from CDN edge.
+- **Backend Service**: FastAPI backend from `backend/` with entrypoint `main:app`, handling `/api/(.*)`.
+- **Bindings**: Service binding `BACKEND_SERVICE_URL` declared on the frontend service.
 
 ### Step-by-Step Vercel Deployment:
 
@@ -23,7 +24,7 @@ This repository includes a native Vercel configuration (`vercel.json` + `api/ind
 3. **Configure Project**:
    - **Project Name**: `johngpt` (or any name you like).
    - **Root Directory**: Leave it as `./` (default root folder). **Do NOT** change it to `frontend` so both backend and frontend build together!
-   - **Framework Preset**: Auto-detected / Other.
+   - **Framework Preset**: Auto-detected (Vercel Services).
 
 4. **Add Environment Variables**:
    Expand the **Environment Variables** section and add:
@@ -32,7 +33,7 @@ This repository includes a native Vercel configuration (`vercel.json` + `api/ind
 
 5. **Deploy**:
    - Click **Deploy**.
-   - Vercel will install Python dependencies, build the React frontend, and deploy the entire application to a live URL (e.g. `https://johngpt.vercel.app`)!
+   - Vercel builds both services independently and routes `/api/*` to the backend and all pages to the frontend on your live URL (e.g. `https://johngpt.vercel.app`)!
 
 6. **Change URL / Custom Domain** (Optional):
    - In your Vercel Dashboard, go to **Settings** > **Domains**.
