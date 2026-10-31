@@ -7,7 +7,10 @@ import os
 from pathlib import Path
 import chromadb
 import docx
-import pymupdf
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
 from rank_bm25 import BM25Okapi
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "/tmp/data" if os.getenv("VERCEL") else "data"))
@@ -53,13 +56,25 @@ def extract_chunks(content: bytes, filename: str) -> list[tuple[str, int]]:
 
     # 1. PDF Documents
     if ext == ".pdf":
-        doc = pymupdf.open(stream=content, filetype="pdf")
-        for page_index in range(len(doc)):
-            page_text = doc[page_index].get_text()
-            page_num = page_index + 1
-            for chunk in chunk_words(page_text):
-                items.append((chunk, page_num))
-        doc.close()
+        if pypdf is not None:
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            for page_index, page in enumerate(reader.pages):
+                page_text = page.extract_text() or ""
+                page_num = page_index + 1
+                for chunk in chunk_words(page_text):
+                    items.append((chunk, page_num))
+        else:
+            try:
+                import pymupdf
+                doc = pymupdf.open(stream=content, filetype="pdf")
+                for page_index in range(len(doc)):
+                    page_text = doc[page_index].get_text()
+                    page_num = page_index + 1
+                    for chunk in chunk_words(page_text):
+                        items.append((chunk, page_num))
+                doc.close()
+            except ImportError:
+                raise RuntimeError("No PDF library installed. Please install pypdf.")
 
     # 2. Microsoft Word Documents (.docx)
     elif ext == ".docx":
