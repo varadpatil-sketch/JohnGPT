@@ -42,3 +42,20 @@ class CreateSessionRequest(BaseModel):
 class UpdateSessionRequest(BaseModel):
     title: str | None = None
     is_pinned: bool | None = None
+
+
+class GenerateImageRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    aspect_ratio: str | None = "1:1"
+    style: str | None = None
+    model: str | None = "nano-banana-pro-preview"
+
+
+class GenerateImageResponse(BaseModel):
+    image_url: str
+    prompt: str
+    full_prompt: str | None = None
+    model_used: str
+    aspect_ratio: str
+    style: str | None = None
+    seed: int | None = None

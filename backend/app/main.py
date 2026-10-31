@@ -39,7 +39,10 @@ from app.schemas import (
     UploadResponse,
     CreateSessionRequest,
     UpdateSessionRequest,
+    GenerateImageRequest,
+    GenerateImageResponse,
 )
+from app.image_gen import generate_image_pipeline
 from app.security import validate_document, validate_pdf, validate_document_id
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -551,6 +554,30 @@ def chat_stream(request: ChatRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.post("/images/generate", response_model=GenerateImageResponse)
+@app.post("/api/images/generate", response_model=GenerateImageResponse)
+def generate_image_endpoint(request: GenerateImageRequest):
+    """
+    Generate high-quality images from text description.
+    Uses Google Nano Banana Pro / Gemini Image on Pro plan,
+    or resilient visual neural synthesis fallback.
+    """
+    try:
+        result = generate_image_pipeline(
+            prompt=request.prompt,
+            aspect_ratio=request.aspect_ratio or "1:1",
+            style=request.style,
+            model=request.model,
+        )
+        return GenerateImageResponse(**result)
+    except Exception as e:
+        print(f"Image generation endpoint error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image generation failed: {str(e)}",
+        )
 
 
 @app.get("/{full_path:path}")

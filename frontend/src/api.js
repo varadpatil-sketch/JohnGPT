@@ -251,3 +251,22 @@ export async function deleteSession(sessionId) {
   return await res.json();
 }
 
+export async function generateImage({ prompt, aspect_ratio = "1:1", style = null, model = "nano-banana-pro-preview" }) {
+  const res = await fetch(`${API_BASE}/images/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt,
+      aspect_ratio,
+      style: style === "None" ? null : style,
+      model,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to generate image" }));
+    throw new Error(err.detail || "Failed to generate image");
+  }
+  return await res.json();
+}
+
+

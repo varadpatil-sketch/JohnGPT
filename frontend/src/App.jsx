@@ -6,6 +6,7 @@ import CustomInstructionsModal from "./components/CustomInstructionsModal";
 import VoiceModeModal from "./components/VoiceModeModal";
 import Artifacts from "./components/Artifacts";
 import CodeStudio from "./components/CodeStudio";
+import ImageStudio from "./components/ImageStudio";
 import {
   checkHealth,
   fetchTools,
@@ -632,8 +633,14 @@ export default function App() {
         onOpenStudio={() => handleOpenStudio()}
         onOpenArtifacts={() => setActiveMainView("artifacts")}
         onOpenCode={() => setActiveMainView("code")}
+        onOpenCreate={() => setActiveMainView("create")}
         onOpenChat={() => setActiveMainView("chat")}
         onOpenCustomInstructions={() => setShowInstructionsModal(true)}
+        onAttachImageToChat={(imgUrl, prompt) => {
+          setActiveMainView("chat");
+          setAttachedImage(imgUrl);
+          setInput(prompt ? `Discuss this created image: "${prompt}"` : "Analyze this image");
+        }}
         activeMainView={activeMainView}
       />
 
@@ -648,6 +655,15 @@ export default function App() {
           <Artifacts
             onClose={() => setActiveMainView("chat")}
             onSelectTemplate={handleCreateArtifactFromTemplate}
+          />
+        ) : activeMainView === "create" ? (
+          <ImageStudio
+            onClose={() => setActiveMainView("chat")}
+            onSendToChat={(imgUrl, prompt) => {
+              setActiveMainView("chat");
+              setAttachedImage(imgUrl);
+              setInput(prompt ? `Analyze this generated image: "${prompt}"` : "Analyze this image");
+            }}
           />
         ) : (
           <ChatArea
