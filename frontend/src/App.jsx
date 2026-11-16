@@ -8,6 +8,9 @@ import VoiceModeModal from "./components/VoiceModeModal";
 import Artifacts from "./components/Artifacts";
 import CodeStudio from "./components/CodeStudio";
 import ImageStudio from "./components/ImageStudio";
+import SlideStudio, { DEFAULT_FOOTBALL_DECK } from "./components/SlideStudio";
+import DocStudio, { DEFAULT_AI_DOC } from "./components/DocStudio";
+import AppStudio, { DEFAULT_DASHBOARD_APP } from "./components/AppStudio";
 import {
   checkHealth,
   fetchTools,
@@ -25,11 +28,21 @@ import "./App.css";
 
 const STORAGE_KEY_CUSTOM_INSTRUCTIONS = "mollie_custom_instructions";
 const STORAGE_KEY_SELECTED_MODEL = "mollie_selected_model";
+const STORAGE_KEY_ACTIVE_SESSION = "mollie_active_session_id";
 
 export default function App() {
   const [sessions, setSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState("");
+  const [sessionSwitchCount, setSessionSwitchCount] = useState(0);
+  const [currentSessionId, setCurrentSessionId] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY_ACTIVE_SESSION) || "";
+  });
   const [messagesBySession, setMessagesBySession] = useState({});
+
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem(STORAGE_KEY_ACTIVE_SESSION, currentSessionId);
+    }
+  }, [currentSessionId]);
 
   const [customInstructions, setCustomInstructions] = useState(() => {
     try {
@@ -46,7 +59,39 @@ export default function App() {
   const [showVoiceModeModal, setShowVoiceModeModal] = useState(false);
   const [activeMainView, setActiveMainView] = useState("chat"); // 'chat' | 'studio'
   const [activeStudioArtifact, setActiveStudioArtifact] = useState(null);
+  const [activeArtifact, setActiveArtifact] = useState(null); // { id, title, type: 'slides' | 'doc' | 'app', data }
+  const [isArtifactSplitView, setIsArtifactSplitView] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const handleOpenArtifact = (art) => {
+    if (!art) return;
+    let normalized = art;
+    if (art.slides || art.theme) {
+      normalized = {
+        id: art.id || `art-${Date.now()}`,
+        title: art.title || "Slides",
+        type: "slides",
+        data: art,
+      };
+    } else if (art.content && !art.html && !art.code) {
+      normalized = {
+        id: art.id || `art-${Date.now()}`,
+        title: art.title || "Document",
+        type: "doc",
+        data: art,
+      };
+    } else if (!art.type && (art.html || art.code)) {
+      normalized = {
+        id: art.id || `art-${Date.now()}`,
+        title: art.title || "Web App",
+        type: "app",
+        data: art,
+      };
+    }
+    setActiveArtifact(normalized);
+    setIsArtifactSplitView(true);
+    setActiveMainView("chat");
+  };
 
   const handleOpenStudio = (artifact = null) => {
     if (artifact) {
@@ -94,7 +139,9 @@ export default function App() {
 
         if (backendSessions && backendSessions.length > 0) {
           setSessions(backendSessions);
-          const activeId = backendSessions[0].id;
+          const savedActiveId = localStorage.getItem(STORAGE_KEY_ACTIVE_SESSION);
+          const found = backendSessions.find((s) => s.id === savedActiveId);
+          const activeId = found ? found.id : backendSessions[0].id;
           setCurrentSessionId(activeId);
           const initialMsgs = await fetchSessionMessages(activeId);
           setMessagesBySession({ [activeId]: initialMsgs });
@@ -165,6 +212,7 @@ export default function App() {
     targetAssistantIndex,
     modelOverride = null,
     initialTextToAppend = "",
+    sessionIdOverride = null,
   }) => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -172,7 +220,29 @@ export default function App() {
 
     let streamedText = "";
     let lastTool = null;
-    const targetSessionId = currentSessionId;
+    let streamRafId = null;
+
+    const flushStreamUpdate = () => {
+      setMessagesBySession((prev) => {
+        const list = prev[targetSessionId] || [];
+        const idx = targetAssistantIndex !== undefined ? targetAssistantIndex : list.length - 1;
+        if (!list[idx]) return prev;
+        const updated = [...list];
+        updated[idx] = {
+          ...updated[idx],
+          content: combineText(initialTextToAppend, streamedText),
+          tool_used: lastTool,
+          isStreaming: true,
+          isStopped: false,
+        };
+        return { ...prev, [targetSessionId]: updated };
+      });
+    };
+
+    const targetSessionId =
+      sessionIdOverride ||
+      currentSessionId ||
+      `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const formattedInstructions =
       customInstructions?.enabled &&
       (customInstructions.aboutUser?.trim() || customInstructions.responseStyle?.trim())
@@ -200,20 +270,12 @@ export default function App() {
         signal: controller.signal,
         onToken: (token) => {
           streamedText += token;
-          setMessagesBySession((prev) => {
-            const list = prev[targetSessionId] || [];
-            const idx = targetAssistantIndex !== undefined ? targetAssistantIndex : list.length - 1;
-            if (!list[idx]) return prev;
-            const updated = [...list];
-            updated[idx] = {
-              ...updated[idx],
-              content: combineText(initialTextToAppend, streamedText),
-              tool_used: lastTool,
-              isStreaming: true,
-              isStopped: false,
-            };
-            return { ...prev, [targetSessionId]: updated };
-          });
+          if (!streamRafId) {
+            streamRafId = requestAnimationFrame(() => {
+              streamRafId = null;
+              flushStreamUpdate();
+            });
+          }
         },
         onTool: (event) => {
           lastTool = event.tool;
@@ -230,6 +292,10 @@ export default function App() {
           });
         },
         onDone: (event) => {
+          if (streamRafId) {
+            cancelAnimationFrame(streamRafId);
+            streamRafId = null;
+          }
           if (event.new_title) {
             setSessions((prev) =>
               prev.map((s) => (s.id === targetSessionId ? { ...s, title: event.new_title } : s))
@@ -247,6 +313,33 @@ export default function App() {
           });
 
           const finalPiece = event.answer || streamedText;
+          const fullFinalContent = combineText(initialTextToAppend, finalPiece);
+
+          // Auto-detect interactive slide deck generated by assistant
+          if (
+            fullFinalContent.includes("```slides") ||
+            (fullFinalContent.includes("```json") &&
+              fullFinalContent.includes('"slides"') &&
+              (fullFinalContent.includes('"layout"') || fullFinalContent.includes('"kicker"')))
+          ) {
+            try {
+              const match = /```(?:slides|json)\s*([\s\S]*?)```/.exec(fullFinalContent);
+              if (match && match[1]) {
+                const parsed = JSON.parse(match[1]);
+                if (parsed && Array.isArray(parsed.slides)) {
+                  handleOpenArtifact({
+                    id: `deck-${Date.now()}`,
+                    title: parsed.title || "Interactive Presentation",
+                    type: "slides",
+                    data: parsed,
+                  });
+                }
+              }
+            } catch (e) {
+              // ignore partial parse error
+            }
+          }
+
           setMessagesBySession((prev) => {
             const list = prev[targetSessionId] || [];
             const idx = targetAssistantIndex !== undefined ? targetAssistantIndex : list.length - 1;
@@ -254,7 +347,7 @@ export default function App() {
             const updated = [...list];
             updated[idx] = {
               ...updated[idx],
-              content: combineText(initialTextToAppend, finalPiece),
+              content: fullFinalContent,
               tool_used: event.tool_used || lastTool,
               sources: event.sources || [],
               isStreaming: false,
@@ -269,6 +362,62 @@ export default function App() {
       });
     } catch (err) {
       if (err.name !== "AbortError") {
+        let displayError = "The AI service encountered a temporary error. Please tap 'Regenerate' or try again in a moment.";
+        if (typeof err === "string") {
+          const trimmed = err.trim();
+          if (trimmed && trimmed !== "[object Object]" && trimmed !== "{}") {
+            displayError = trimmed;
+          }
+        } else if (typeof err?.message === "string" && err.message.trim() && err.message.trim() !== "[object Object]" && err.message.trim() !== "{}") {
+          displayError = err.message.trim();
+        } else if (err?.detail) {
+          if (typeof err.detail === "string") displayError = err.detail;
+          else if (typeof err.detail === "object") {
+            try { displayError = err.detail.message || JSON.stringify(err.detail); } catch (_) {}
+          }
+        } else if (err?.error) {
+          if (typeof err.error === "string") displayError = err.error;
+          else if (typeof err.error === "object") {
+            try { displayError = err.error.message || JSON.stringify(err.error); } catch (_) {}
+          }
+        } else {
+          try {
+            const s = JSON.stringify(err);
+            if (s && s !== "{}" && s !== "null" && s !== "[object Object]") {
+              displayError = s;
+            }
+          } catch (_) {}
+        }
+
+        if (displayError === "[object Object]" || displayError === "{}") {
+          displayError = "The AI service encountered a temporary error. Please tap 'Regenerate' or try again in a moment.";
+        }
+
+        // Cleanly format validation error arrays (e.g. from FastAPI/Pydantic)
+        if (typeof displayError === "string" && displayError.trim().startsWith("[") && displayError.trim().endsWith("]")) {
+          try {
+            const arr = JSON.parse(displayError.trim());
+            if (Array.isArray(arr) && arr.length > 0 && arr[0]?.msg) {
+              const field = Array.isArray(arr[0].loc) ? arr[0].loc.filter((x) => x !== "body").join(".") : "";
+              displayError = `Invalid request${field ? ` (${field})` : ""}: ${arr[0].msg}. Please tap 'Regenerate'.`;
+            }
+          } catch (_) {}
+        }
+
+        const low = displayError.toLowerCase();
+        if (
+          low.includes("429") ||
+          low.includes("resource_exhausted") ||
+          low.includes("quota exceeded") ||
+          low.includes("rate limit")
+        ) {
+          displayError = "AI model rate limit reached. Please tap 'Regenerate' in a moment or select Gemini 3.5 Flash Lite.";
+        } else if (low.includes("504") || low.includes("timeout")) {
+          displayError = "Request timed out while generating this complex response. Please tap 'Regenerate' to try again.";
+        } else if (low.includes("failed to fetch") || low.includes("networkerror") || low.includes("connection")) {
+          displayError = "Connection to AI service was interrupted. Please check your network and tap 'Regenerate'.";
+        }
+
         setMessagesBySession((prev) => {
           const list = prev[targetSessionId] || [];
           const idx = targetAssistantIndex !== undefined ? targetAssistantIndex : list.length - 1;
@@ -278,13 +427,17 @@ export default function App() {
             ...updated[idx],
             content:
               (streamedText ? streamedText + "\n\n" : "") +
-              `⚠️ **Error:** ${err.message || "Failed to complete stream."}`,
+              `⚠️ **Error:** ${displayError}`,
             isStreaming: false,
           };
           return { ...prev, [targetSessionId]: updated };
         });
       }
     } finally {
+      if (streamRafId) {
+        cancelAnimationFrame(streamRafId);
+        streamRafId = null;
+      }
       abortControllerRef.current = null;
       setLoading(false);
     }
@@ -296,6 +449,22 @@ export default function App() {
 
     const messageText = text || (attachedImage ? "Please analyze this image." : "");
     const currentImage = attachedImage;
+
+    // Ensure we always have a valid, active session ID
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      activeSessionId = `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      setCurrentSessionId(activeSessionId);
+      setSessions((prev) => [
+        {
+          id: activeSessionId,
+          title: messageText.length > 28 ? messageText.substring(0, 28) + "..." : messageText,
+          created_at: Date.now() / 1000,
+          updated_at: Date.now() / 1000,
+        },
+        ...prev,
+      ]);
+    }
 
     const userMessage = {
       role: "user",
@@ -314,10 +483,11 @@ export default function App() {
     };
 
     // Update current session's title if it's the first message
-    if (currentMessages.length === 0) {
+    const existingMsgs = messagesBySession[activeSessionId] || [];
+    if (existingMsgs.length === 0) {
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === currentSessionId
+          s.id === activeSessionId
             ? { ...s, title: messageText.length > 28 ? messageText.substring(0, 28) + "..." : messageText }
             : s
         )
@@ -326,8 +496,8 @@ export default function App() {
 
     setMessagesBySession((prev) => ({
       ...prev,
-      [currentSessionId]: [
-        ...(prev[currentSessionId] || []),
+      [activeSessionId]: [
+        ...(prev[activeSessionId] || []),
         userMessage,
         assistantPlaceholder,
       ],
@@ -340,6 +510,7 @@ export default function App() {
       messageText,
       imageBase64: currentImage?.base64,
       imageMimeType: currentImage?.mimeType,
+      sessionIdOverride: activeSessionId,
     });
   };
 
@@ -383,6 +554,7 @@ export default function App() {
       imageBase64: rawB64,
       imageMimeType: null,
       targetAssistantIndex: assistantIndex,
+      sessionIdOverride: currentSessionId,
     });
   };
 
@@ -445,6 +617,7 @@ export default function App() {
       imageMimeType: null,
       targetAssistantIndex: assistantIndex,
       initialTextToAppend: previousContent,
+      sessionIdOverride: currentSessionId,
     });
   };
 
@@ -491,11 +664,13 @@ export default function App() {
       imageBase64: rawB64,
       imageMimeType: null,
       targetAssistantIndex: userIndex + 1,
+      sessionIdOverride: currentSessionId,
     });
   };
 
   const handleSelectSession = async (sessionId) => {
     setCurrentSessionId(sessionId);
+    setSessionSwitchCount((c) => c + 1);
     setActiveMainView("chat");
     if (!messagesBySession[sessionId]) {
       try {
@@ -509,6 +684,7 @@ export default function App() {
 
   const handleNewSession = async () => {
     setActiveMainView("chat");
+    setSessionSwitchCount((c) => c + 1);
     try {
       const newSession = await createSession();
       setSessions((prev) => [newSession, ...prev]);
@@ -604,7 +780,14 @@ export default function App() {
 
   const handleCreateArtifactFromTemplate = (templateType, promptText) => {
     setActiveMainView("chat");
-    setInput(promptText);
+    const targetPrompt =
+      promptText ||
+      (templateType === "slides"
+        ? "Create an interactive presentation deck on: "
+        : templateType === "docs"
+        ? "Write a technical specification document for: "
+        : "Build an interactive web application for: ");
+    setInput(targetPrompt);
     setTimeout(() => {
       const textarea = document.querySelector(".claude-composer-textarea");
       if (textarea) {
@@ -662,6 +845,12 @@ export default function App() {
           }}
           onOpenCreate={() => {
             setActiveMainView("create");
+            setIsMobileSidebarOpen(false);
+          }}
+          onOpenSlides={() => {
+            setActiveMainView("chat");
+            setActiveSlideDeck(DEFAULT_FOOTBALL_DECK);
+            setIsSlideSplitView(true);
             setIsMobileSidebarOpen(false);
           }}
           onOpenChat={() => {
@@ -722,6 +911,7 @@ export default function App() {
         ) : activeMainView === "artifacts" ? (
           <Artifacts
             onClose={() => setActiveMainView("chat")}
+            onOpenArtifact={handleOpenArtifact}
             onSelectTemplate={handleCreateArtifactFromTemplate}
           />
         ) : activeMainView === "create" ? (
@@ -734,36 +924,67 @@ export default function App() {
             }}
           />
         ) : (
-          <ChatArea
-            messages={currentMessages}
-            input={input}
-            setInput={setInput}
-            onSend={handleSend}
-            onStopGenerating={handleStopGenerating}
-            onContinueGenerating={handleContinueGenerating}
-            onRegenerate={handleRegenerate}
-            onEditMessage={handleEditMessage}
-            onViewCitation={setActiveCitation}
-            loading={loading}
-            selectedDoc={selectedDoc}
-            onClearSelectedDoc={() => setSelectedDocId(null)}
-            currentSessionId={currentSessionId}
-            onAttachClick={() => {
-              document.querySelector(".upload-box")?.click();
-            }}
-            onClearMessages={handleClearMessages}
-            attachedImage={attachedImage}
-            setAttachedImage={setAttachedImage}
-            onOpenCustomInstructions={() => setShowInstructionsModal(true)}
-            hasCustomInstructions={Boolean(
-              customInstructions?.enabled &&
-                (customInstructions?.aboutUser?.trim() || customInstructions?.responseStyle?.trim())
+          <div className={`chat-workspace-wrapper ${activeArtifact ? "split-slides-active" : ""}`}>
+            <div className="split-chat-pane">
+              <ChatArea
+                messages={currentMessages}
+                input={input}
+                setInput={setInput}
+                sessionSwitchCount={sessionSwitchCount}
+                onSend={handleSend}
+                onStopGenerating={handleStopGenerating}
+                onContinueGenerating={handleContinueGenerating}
+                onRegenerate={handleRegenerate}
+                onEditMessage={handleEditMessage}
+                onViewCitation={setActiveCitation}
+                loading={loading}
+                selectedDoc={selectedDoc}
+                onClearSelectedDoc={() => setSelectedDocId(null)}
+                currentSessionId={currentSessionId}
+                onUploadDocument={handleUploadDocument}
+                onClearMessages={handleClearMessages}
+                attachedImage={attachedImage}
+                setAttachedImage={setAttachedImage}
+                onOpenCustomInstructions={() => setShowInstructionsModal(true)}
+                hasCustomInstructions={Boolean(
+                  customInstructions?.enabled &&
+                    (customInstructions?.aboutUser?.trim() || customInstructions?.responseStyle?.trim())
+                )}
+                onOpenVoiceMode={() => setShowVoiceModeModal(true)}
+                onOpenStudio={() => handleOpenStudio()}
+                onOpenSlideDeck={(deck) => handleOpenArtifact({ type: "slides", title: deck?.title || "Presentation", data: deck || DEFAULT_FOOTBALL_DECK })}
+                onOpenArtifact={handleOpenArtifact}
+                selectedModel={selectedModel}
+                onSelectModel={setSelectedModel}
+              />
+            </div>
+            {activeArtifact && (
+              <div className={`split-slides-pane ${!isArtifactSplitView ? "fullscreen-pane" : ""}`}>
+                {activeArtifact.type === "slides" ? (
+                  <SlideStudio
+                    deck={activeArtifact.data || activeArtifact}
+                    isSplitView={isArtifactSplitView}
+                    onToggleSplitView={() => setIsArtifactSplitView(!isArtifactSplitView)}
+                    onClose={() => setActiveArtifact(null)}
+                  />
+                ) : activeArtifact.type === "doc" ? (
+                  <DocStudio
+                    doc={activeArtifact.data || activeArtifact}
+                    isSplitView={isArtifactSplitView}
+                    onToggleSplitView={() => setIsArtifactSplitView(!isArtifactSplitView)}
+                    onClose={() => setActiveArtifact(null)}
+                  />
+                ) : (
+                  <AppStudio
+                    app={activeArtifact.data || activeArtifact}
+                    isSplitView={isArtifactSplitView}
+                    onToggleSplitView={() => setIsArtifactSplitView(!isArtifactSplitView)}
+                    onClose={() => setActiveArtifact(null)}
+                  />
+                )}
+              </div>
             )}
-            onOpenVoiceMode={() => setShowVoiceModeModal(true)}
-            onOpenStudio={() => handleOpenStudio()}
-            selectedModel={selectedModel}
-            onSelectModel={setSelectedModel}
-          />
+          </div>
         )}
       </div>
 

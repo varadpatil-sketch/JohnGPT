@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
-    session_id: str = Field(min_length=1, max_length=100)
+    session_id: str = Field(default="", max_length=100)
     document_id: str | None = None
     image_base64: str | None = None
     image_mime_type: str | None = None

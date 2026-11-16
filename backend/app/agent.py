@@ -13,8 +13,8 @@ load_dotenv(dotenv_path=env_path)
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-FALLBACK_MODEL = "gemini-3.5-flash" if "lite" in MODEL else "gemini-3.5-flash-lite"
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+FALLBACK_MODEL = "gemini-3.5-flash-lite"
 VALID_MODELS = {
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
@@ -41,13 +41,15 @@ client = genai.Client(api_key=API_KEY)
 
 def get_models_hierarchy(requested_model: str | None = None) -> list[str]:
     """Resolve primary and fallback models based on client request and environment configuration."""
-    if requested_model in {"gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-pro"}:
-        primary = requested_model
-        fallback = "gemini-3.5-flash-lite" if primary != "gemini-3.5-flash-lite" else "gemini-3.5-flash"
+    if requested_model == "gemini-3.5-flash-lite":
+        return ["gemini-3.5-flash-lite", "gemini-3.5-flash"]
+    elif requested_model in {"gemini-2.5-pro", "gemini-3.1-pro-preview"}:
+        return ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
+    elif requested_model == "gemini-3.5-flash":
+        return ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
     else:
-        primary = "gemini-3.5-flash"
-        fallback = "gemini-3.5-flash-lite"
-    return [primary, fallback]
+        # Default to ultra-fast gemini-3.5-flash (1.4s response time)
+        return ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
 
 def call_groq(prompt: str, model: str) -> str | None:
@@ -212,9 +214,18 @@ def call_gemini(contents, config=None, model=None):
                 is_recoverable = any(
                     k in error_msg
                     for k in (
+                        "429",
+                        "resource_exhausted",
+                        "quota",
+                        "rate_limit",
+                        "rate limit",
+                        "limit",
+                        "exhausted",
                         "503",
                         "unavailable",
                         "404",
+                        "not found",
+                        "not_found",
                         "wsarecv",
                         "forcibly closed",
                         "stream reading error",
@@ -230,7 +241,7 @@ def call_gemini(contents, config=None, model=None):
                     import time
                     time.sleep(0.5)
                     continue
-                raise
+                break
     if last_error:
         raise last_error
 
@@ -265,10 +276,17 @@ def call_gemini_stream(contents, config=None, model=None):
                 if yielded:
                     raise error
 
-                # Check for transient network/socket or load errors
+                # Check for transient network/socket, quota or load errors
                 is_recoverable = any(
                     k in error_msg
                     for k in (
+                        "429",
+                        "resource_exhausted",
+                        "quota",
+                        "rate_limit",
+                        "rate limit",
+                        "limit",
+                        "exhausted",
                         "wsarecv",
                         "forcibly closed",
                         "connection",
@@ -277,6 +295,8 @@ def call_gemini_stream(contents, config=None, model=None):
                         "503",
                         "unavailable",
                         "404",
+                        "not found",
+                        "not_found",
                         "timeout",
                         "reset by peer",
                     )
@@ -513,7 +533,34 @@ Instructions:
 - Use `get_weather` when asked about current weather or temperature in any location.
 - Never claim that a tool ran unless it actually ran.
 {source_rule}
-- When asked to create, code, or build a game, app, or website:
+- When asked to create, design, or show a presentation, PowerPoint (PPT/PPTX), pitch deck, or slides artifact (or when shown a slides screenshot):
+  * You have native, first-class support for interactive slide presentations (JohnGPT Slides), featuring a 16:9 editorial canvas, bottom filmstrip carousel with numbered thumbnail preview cards, fullscreen presentation mode, and one-click export to real Microsoft PowerPoint (.pptx) files!
+  * Enthusiastically introduce the deck and summarize its slide structure.
+  * Provide the complete deck definition inside a ```slides code block with valid JSON containing:
+      - "title": presentation title string
+      - "theme": "forest" (or "cream", "gold", "obsidian", "indigo")
+      - "slides": array of 4-8 slide objects. Each slide object MUST have:
+          * "id": unique string (e.g. "slide-1")
+          * "layout": "title" | "stats" | "bullets" | "columns" | "table" | "quote"
+          * "kicker": short uppercase category tag
+          * "title": slide headline
+          * "subtitle": brief subtitle or summary
+          * "themeVariant": optional theme override ("forest", "cream", "gold")
+          * layout-specific data:
+              for stats: "stats" list of objects having "value", "label", "desc"
+              for bullets: "points" list of objects having "title", "text"
+              for columns: "columns" list of objects having "title", "role", "desc"
+              for table: "table" object having "headers" list and "rows" 2D list
+              for quote: "quote" text string and "author" name string
+  * This code block is automatically recognized by JohnGPT and rendered as an interactive Slides Artifact with live filmstrip navigation and instant PowerPoint download.
+- When asked to write, draft, or create technical documentation, design specifications, PRDs, research reports, or guides:
+  * Provide the complete, structured document inside a ```doc code block so JohnGPT renders it as an interactive Document Artifact with table of contents outline, word count, reading time, and Markdown/PDF export.
+- When asked to build an interactive dashboard, UI component, mockup, calculator, or web app:
+  * Provide complete, self-contained, and interactive HTML, CSS, and JavaScript in a single ```html code block so it renders immediately in the interactive App Sandbox workspace.
+- When asked for code, programming, data science/ML models, algorithms, or technical solutions (e.g., in Python, JavaScript, TypeScript, SQL, etc.):
+  * Immediately provide clean, modular, performant, and production-ready code with type hints, numerical stability considerations, and best practices.
+  * Include clear explanations, architecture rationale, and runnable example usage.
+- When asked to create, code, or build an interactive playable game, interactive web app, or frontend showcase:
   * If the request is generic or lacks details (such as just "create a game", "build an app", or "make a website" without specifying the genre, gameplay, theme, or rules), do NOT generate code immediately. Instead, enthusiastically ask 2-3 quick questions or propose 3-4 distinct options (e.g., 2D Car Racing, Retro Space Shooter, Cyberpunk Snake, or Platformer) to clarify what they want to build.
   * Once specific details, a game genre, or mechanics are provided (e.g., "car racing game with arrow keys"), provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
 - Never invent tool results or sources.
@@ -693,7 +740,36 @@ Instructions:
 - Never claim that a tool ran unless it actually ran.
 {source_rule}
 - When presenting mathematical formulas or calculations, format equations cleanly using standard markdown (e.g., 1/2 or a/b) or standard LaTeX enclosed in single dollar signs ($...$) for inline math and double dollar signs ($$...$$) for block math. Never output raw LaTeX commands like \frac outside of math delimiters.
-- When asked to create, code, or build a game, app, or website:
+- For currency, money, and prices (e.g., $80, $20, $60), write them normally in plain text as $80 or $20. NEVER wrap money amounts in LaTeX math delimiters ($...$ or $$...$$), and NEVER write $\\$80$ or \\$80.
+- For collapsible answer keys, spoiler solutions, or hidden explanations, use standard HTML <details><summary><b>Click to reveal the Answer Key & Explanations</b></summary>\n\n[Answers here]\n\n</details>. Always ensure there are clear line breaks after <summary> and before </details>.
+- When asked to create, design, or show a presentation, PowerPoint (PPT/PPTX), pitch deck, or slides artifact (or when shown a slides screenshot):
+  * You have native, first-class support for interactive slide presentations (JohnGPT Slides), featuring a 16:9 editorial canvas, bottom filmstrip carousel with numbered thumbnail preview cards, fullscreen presentation mode, and one-click export to real Microsoft PowerPoint (.pptx) files!
+  * Enthusiastically introduce the deck and summarize its slide structure.
+  * Provide the complete deck definition inside a ```slides code block with valid JSON containing:
+      - "title": presentation title string
+      - "theme": "forest" (or "cream", "gold", "obsidian", "indigo")
+      - "slides": array of 4-8 slide objects. Each slide object MUST have:
+          * "id": unique string (e.g. "slide-1")
+          * "layout": "title" | "stats" | "bullets" | "columns" | "table" | "quote"
+          * "kicker": short uppercase category tag
+          * "title": slide headline
+          * "subtitle": brief subtitle or summary
+          * "themeVariant": optional theme override ("forest", "cream", "gold")
+          * layout-specific data:
+              for stats: "stats" list of objects having "value", "label", "desc"
+              for bullets: "points" list of objects having "title", "text"
+              for columns: "columns" list of objects having "title", "role", "desc"
+              for table: "table" object having "headers" list and "rows" 2D list
+              for quote: "quote" text string and "author" name string
+  * This code block is automatically recognized by JohnGPT and rendered as an interactive Slides Artifact with live filmstrip navigation and instant PowerPoint download.
+- When asked to write, draft, or create technical documentation, design specifications, PRDs, research reports, or guides:
+  * Provide the complete, structured document inside a ```doc code block so JohnGPT renders it as an interactive Document Artifact with table of contents outline, word count, reading time, and Markdown/PDF export.
+- When asked to build an interactive dashboard, UI component, mockup, calculator, or web app:
+  * Provide complete, self-contained, and interactive HTML, CSS, and JavaScript in a single ```html code block so it renders immediately in the interactive App Sandbox workspace.
+- When asked for code, programming, data science/ML models, algorithms, or technical solutions (e.g., in Python, JavaScript, TypeScript, SQL, etc.):
+  * Immediately provide clean, modular, performant, and production-ready code with type hints, numerical stability considerations, and best practices.
+  * Include clear explanations, architecture rationale, and runnable example usage.
+- When asked to create, code, or build an interactive playable game, interactive web app, or frontend showcase:
   * If the request is generic or lacks details (such as just "create a game", "build an app", or "make a website" without specifying the genre, gameplay, theme, or rules), do NOT generate code immediately. Instead, enthusiastically ask 2-3 quick questions or propose 3-4 distinct options (e.g., 2D Car Racing, Retro Space Shooter, Cyberpunk Snake, or Platformer) to clarify what they want to build.
   * Once specific details, a game genre, or mechanics are provided (e.g., "car racing game with arrow keys"), provide complete, standalone, production-ready code with embedded HTML, CSS, and JavaScript in a single ```html code block so it runs directly inside the Studio workspace.
 - Never invent tool results or sources.
@@ -766,71 +842,100 @@ Instructions:
     tool_used = None
     max_rounds = 4
 
-    for _ in range(max_rounds):
-        stream = call_gemini_stream(
-            contents=contents,
-            config=types.GenerateContentConfig(
-                tools=[
-                    types.Tool(
-                        function_declarations=TOOL_DECLARATIONS
-                    )
-                ],
-            ),
-            model=model,
-        )
-
-        has_tool_call = False
-        full_text = ""
-
-        for chunk in stream:
-            parts = chunk.candidates[0].content.parts if chunk.candidates else []
-            for part in parts:
-                if part.function_call:
-                    has_tool_call = True
-                    name = part.function_call.name
-                    yield {"type": "tool_start", "tool": name}
-
-                    if name not in TOOL_REGISTRY:
-                        result = {"error": f"Tool '{name}' is not permitted."}
-                    else:
-                        try:
-                            args = dict(part.function_call.args or {})
-                            value = TOOL_REGISTRY[name](**args)
-                            result = {"result": value}
-                            tool_used = name
-                        except Exception as error:
-                            result = {"error": str(error)}
-
-                    yield {"type": "tool_done", "tool": name}
-
-                    # Append function call and response for next round
-                    contents.append(chunk.candidates[0].content)
-                    contents.append(
-                        types.Content(
-                            role="user",
-                            parts=[
-                                types.Part.from_function_response(
-                                    name=name,
-                                    response=result,
-                                )
-                            ],
+    try:
+        for _ in range(max_rounds):
+            stream = call_gemini_stream(
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    tools=[
+                        types.Tool(
+                            function_declarations=TOOL_DECLARATIONS
                         )
-                    )
+                    ],
+                ),
+                model=model,
+            )
+
+            has_tool_call = False
+            full_text = ""
+
+            for chunk in stream:
+                if not chunk.candidates:
+                    continue
+                cand = chunk.candidates[0]
+                if not cand.content or not cand.content.parts:
+                    finish_reason = getattr(cand, "finish_reason", None)
+                    if finish_reason and any(k in str(finish_reason).upper() for k in ("SAFETY", "BLOCK", "PROHIBITED")):
+                        msg = "I am unable to generate content on this specific topic due to safety guidelines. Please try rephrasing your prompt."
+                        full_text += msg
+                        yield {"type": "token", "text": msg}
+                    continue
+
+                parts = cand.content.parts
+                for part in parts:
+                    if part.function_call:
+                        has_tool_call = True
+                        name = part.function_call.name
+                        yield {"type": "tool_start", "tool": name}
+
+                        if name not in TOOL_REGISTRY:
+                            result = {"error": f"Tool '{name}' is not permitted."}
+                        else:
+                            try:
+                                args = dict(part.function_call.args or {})
+                                value = TOOL_REGISTRY[name](**args)
+                                result = {"result": value}
+                                tool_used = name
+                            except Exception as error:
+                                result = {"error": str(error)}
+
+                        yield {"type": "tool_done", "tool": name}
+
+                        # Append function call and response for next round
+                        contents.append(chunk.candidates[0].content)
+                        contents.append(
+                            types.Content(
+                                role="user",
+                                parts=[
+                                    types.Part.from_function_response(
+                                        name=name,
+                                        response=result,
+                                    )
+                                ],
+                            )
+                        )
+                        break
+                    elif part.text:
+                        full_text += part.text
+                        yield {"type": "token", "text": part.text}
+
+                if has_tool_call:
                     break
-                elif part.text:
-                    full_text += part.text
-                    yield {"type": "token", "text": part.text}
 
-            if has_tool_call:
-                break
+            if not has_tool_call:
+                yield {"type": "done", "answer": full_text.strip(), "tool_used": tool_used}
+                return
 
-        if not has_tool_call:
-            yield {"type": "done", "answer": full_text.strip(), "tool_used": tool_used}
-            return
-
-    yield {
-        "type": "done",
-        "answer": "I reached the tool-call limit before completing your request. Please try again.",
-        "tool_used": tool_used,
-    }
+        yield {
+            "type": "done",
+            "answer": "I reached the tool-call limit before completing your request. Please try again.",
+            "tool_used": tool_used,
+        }
+    except Exception as gemini_err:
+        # Ultimate fallback: If Google API is saturated, stream via Groq Qwen
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key and not tool_used:
+            print(f"[Streaming Fallback] Gemini failed with {gemini_err}. Seamlessly falling back to Groq Qwen...")
+            groq_text = ""
+            for chunk in call_groq_stream(prompt, "qwen/qwen3.8-27b"):
+                groq_text += chunk
+                yield {"type": "token", "text": chunk}
+            if groq_text:
+                yield {
+                    "type": "done",
+                    "answer": groq_text.strip(),
+                    "tool_used": None,
+                }
+                return
+        raise gemini_err
 

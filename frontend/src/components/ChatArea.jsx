@@ -25,6 +25,7 @@ import {
   Play,
   GraduationCap,
   ArrowDown,
+  Presentation,
 } from "lucide-react";
 import MessageItem from "./MessageItem";
 import ThinkingIndicator from "./ThinkingIndicator";
@@ -118,8 +119,8 @@ const QUICK_PILLS = [
 
 // Curated Top Free AI Models supported by JohnGPT
 const AVAILABLE_MODELS = [
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Google AI · Ultra Fast (Default)" },
-  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Google AI · Multimodal & RAG" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", badge: "Google AI · Ultra Fast (Default)" },
+  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", badge: "Google AI · Lightweight" },
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", badge: "Google AI · Deep Reasoning & Coding" },
   { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 (27B)", badge: "Code & Dev · Groq (Free)" },
   { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 (70B)", badge: "Meta AI · OpenRouter" },
@@ -133,12 +134,72 @@ const getTimeGreeting = () => {
   return "Burning the midnight oil? How can I assist you?";
 };
 
-const getTimeHeading = () => {
+const CREATIVE_GREETINGS = [
+  "Ready to create?",
+  "What shall we build?",
+  "Spark your next idea",
+  "Curiosity starts here",
+  "Where should we begin?",
+  "Dream it. Build it.",
+  "Ask, explore, build",
+  "Ready when you are",
+  "Big ideas start here",
+  "Ideas in motion",
+  "Think bold, build fast",
+  "Code, create, explore",
+  "Let's build together",
+  "What's on your mind?",
+  "Let's make something",
+  "Ready for big ideas?",
+  "From thought to code",
+  "Focus mode on",
+  "Create without limits",
+  "Turn curiosity to code",
+  "Ready to build?",
+];
+
+const getTimeBasedCreativeGreetings = () => {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "Good morning";
-  if (hour >= 12 && hour < 17) return "Good afternoon";
-  if (hour >= 17 && hour < 22) return "Good evening";
-  return "Welcome back";
+  if (hour >= 5 && hour < 12) {
+    return [
+      "Good morning, creator",
+      "Fresh morning ideas",
+      "Ready to conquer today?",
+      "Rise and build",
+      "Morning focus on",
+    ];
+  }
+  if (hour >= 12 && hour < 17) {
+    return [
+      "Good afternoon, creator",
+      "Midday inspiration",
+      "Keep the momentum",
+      "Powering your day",
+      "Afternoon focus mode",
+    ];
+  }
+  if (hour >= 17 && hour < 22) {
+    return [
+      "Good evening, creator",
+      "Evening inspiration",
+      "Ready to create tonight?",
+      "Evening focus mode",
+      "Night ideas in motion",
+    ];
+  }
+  return [
+    "Midnight brilliance",
+    "Burning the midnight oil",
+    "Night owl mode on",
+    "Quiet hours, big ideas",
+    "Midnight coding session",
+  ];
+};
+
+const getRandomCreativeHeading = (exclude = null) => {
+  const timePool = getTimeBasedCreativeGreetings();
+  const pool = [...timePool, ...CREATIVE_GREETINGS].filter((item) => item !== exclude);
+  return pool[Math.floor(Math.random() * pool.length)] || "Ready to create?";
 };
 
 const DYNAMIC_GREETINGS = [
@@ -174,6 +235,7 @@ export default function ChatArea({
   messages,
   input,
   setInput,
+  sessionSwitchCount = 0,
   onSend,
   onStopGenerating,
   onContinueGenerating,
@@ -184,6 +246,7 @@ export default function ChatArea({
   selectedDoc,
   onClearSelectedDoc,
   currentSessionId,
+  onUploadDocument,
   onAttachClick,
   onClearMessages,
   attachedImage,
@@ -192,12 +255,15 @@ export default function ChatArea({
   hasCustomInstructions,
   onOpenVoiceMode,
   onOpenStudio,
+  onOpenSlideDeck,
+  onOpenArtifact,
   selectedModel: propSelectedModel,
   onSelectModel,
 }) {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const imageInputRef = useRef(null);
+  const docInputRef = useRef(null);
   const exportMenuRef = useRef(null);
   const recognizerRef = useRef(null);
   const viewportRef = useRef(null);
@@ -206,29 +272,26 @@ export default function ChatArea({
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadDocError, setUploadDocError] = useState(null);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showDepthMenu, setShowDepthMenu] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [activeMode, setActiveMode] = useState("chat");
-  const [internalSelectedModel, setInternalSelectedModel] = useState("gemini-3.5-flash-lite");
+  const [internalSelectedModel, setInternalSelectedModel] = useState("gemini-3.5-flash");
   const [reasoningDepth, setReasoningDepth] = useState("Medium");
   const [dynamicGreeting, setDynamicGreeting] = useState(() => getRandomGreeting());
-  const [timeHeading, setTimeHeading] = useState(() => getTimeHeading());
+  const [heroHeading, setHeroHeading] = useState(() => getRandomCreativeHeading());
+  const prevSwitchCountRef = useRef(sessionSwitchCount);
 
-  // Update dynamic greeting on session change
+  // Update creative greetings ONLY on user-initiated session switch or new chat (never on page refresh/mount)
   useEffect(() => {
-    setTimeHeading(getTimeHeading());
-    setDynamicGreeting((prev) => getRandomGreeting(prev));
-  }, [currentSessionId]);
-
-  // Rotate greeting every 12 seconds when chat is empty and user hasn't typed
-  useEffect(() => {
-    if (messages.length > 0 || input) return;
-    const interval = setInterval(() => {
+    if (sessionSwitchCount > 0 && sessionSwitchCount !== prevSwitchCountRef.current) {
+      prevSwitchCountRef.current = sessionSwitchCount;
+      setHeroHeading(getRandomCreativeHeading());
       setDynamicGreeting((prev) => getRandomGreeting(prev));
-    }, 12000);
-    return () => clearInterval(interval);
-  }, [messages.length, input]);
+    }
+  }, [sessionSwitchCount]);
 
   const lastMessage = messages[messages.length - 1];
   const canContinue = Boolean(
@@ -306,27 +369,54 @@ export default function ChatArea({
     };
   }, []);
 
-  const scrollToBottom = () => {
-    try {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } catch {
+  const isUserScrolledUpRef = useRef(false);
+  const isStreaming = loading || Boolean(lastMessage?.isStreaming);
+
+  const scrollToBottom = (behavior = "smooth") => {
+    if (viewportRef.current) {
+      if (behavior === "smooth") {
+        viewportRef.current.scrollTo({
+          top: viewportRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      } else {
+        viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+      }
+    } else {
       try {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      } catch {
         messagesEndRef.current?.scrollIntoView();
-      } catch {}
+      }
     }
     setShowScrollBottom(false);
+    isUserScrolledUpRef.current = false;
   };
 
   const handleScroll = () => {
     if (!viewportRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    setShowScrollBottom(distanceFromBottom > 100);
+    const isScrolledUp = distanceFromBottom > 120;
+    setShowScrollBottom(isScrolledUp);
+    isUserScrolledUpRef.current = isScrolledUp;
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+    if (messages.length === 0) return;
+    if (isUserScrolledUpRef.current) return;
+
+    if (isStreaming) {
+      // During active token streaming, instant scroll avoids competing smooth-scroll animation jitter
+      if (viewportRef.current) {
+        viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }
+    } else {
+      scrollToBottom("smooth");
+    }
+  }, [messages, loading, isStreaming]);
 
   useEffect(() => {
     if (!input && textareaRef.current) {
@@ -351,8 +441,10 @@ export default function ChatArea({
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, []);
 
@@ -377,6 +469,25 @@ export default function ChatArea({
       });
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleDocFile = async (file) => {
+    if (!file) return;
+    setIsUploadingDoc(true);
+    setUploadDocError(null);
+    try {
+      if (onUploadDocument) {
+        await onUploadDocument(file);
+      } else if (onAttachClick) {
+        onAttachClick();
+      }
+    } catch (err) {
+      console.error("Document upload failed:", err);
+      setUploadDocError(err.message || "Failed to upload document");
+      setTimeout(() => setUploadDocError(null), 5000);
+    } finally {
+      setIsUploadingDoc(false);
+    }
   };
 
   const handlePaste = (e) => {
@@ -488,18 +599,6 @@ export default function ChatArea({
   // Reusable Claude-style composer card
   const renderComposerCard = () => (
     <div className="claude-composer-card">
-      <input
-        type="file"
-        ref={imageInputRef}
-        style={{ display: "none" }}
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            handleImageFile(e.target.files[0]);
-          }
-        }}
-      />
-
       {attachedImage && (
         <div className="attached-image-preview fade-in">
           <img
@@ -509,7 +608,7 @@ export default function ChatArea({
           />
           <div className="preview-info">
             <span className="preview-name">{attachedImage.name}</span>
-            <span className="preview-tag">Multimodal Vision Ready</span>
+            <span className="preview-tag">Image Attached</span>
           </div>
           <button
             type="button"
@@ -519,6 +618,44 @@ export default function ChatArea({
           >
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {isUploadingDoc && (
+        <div className="attached-doc-preview is-uploading fade-in">
+          <div className="doc-preview-icon spinning">
+            <FileText size={16} />
+          </div>
+          <div className="preview-info">
+            <span className="preview-name">Uploading & indexing document...</span>
+            <span className="preview-tag">Processing pages & vector chunks</span>
+          </div>
+        </div>
+      )}
+
+      {selectedDoc && !isUploadingDoc && (
+        <div className="attached-doc-preview fade-in">
+          <div className="doc-preview-icon">
+            <FileText size={16} />
+          </div>
+          <div className="preview-info">
+            <span className="preview-name">{selectedDoc.filename}</span>
+            <span className="preview-tag">{selectedDoc.file_type?.toUpperCase() || "DOC"} Attached • Grounded Q&A</span>
+          </div>
+          <button
+            type="button"
+            className="btn-remove-doc"
+            onClick={onClearSelectedDoc}
+            title="Remove attached document"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {uploadDocError && (
+        <div className="doc-upload-error-pill fade-in">
+          <span>⚠️ {uploadDocError}</span>
         </div>
       )}
 
@@ -563,18 +700,18 @@ export default function ChatArea({
                   }}
                 >
                   <ImageIcon size={15} />
-                  <span>Attach Image (Vision)</span>
+                  <span>Attach Image</span>
                 </button>
                 <button
                   type="button"
                   className="dropdown-menu-item"
                   onClick={() => {
                     setShowAttachMenu(false);
-                    onAttachClick();
+                    docInputRef.current?.click();
                   }}
                 >
                   <FileText size={15} />
-                  <span>Upload Document (RAG)</span>
+                  <span>Upload Document</span>
                 </button>
               </div>
             )}
@@ -612,32 +749,39 @@ export default function ChatArea({
               title="Select AI Model"
             >
               <span className="model-name">
-                {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash Lite"}
+                {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash"}
               </span>
               <ChevronDown size={11} className="model-caret" />
             </button>
 
             {showModelMenu && (
-              <div className="claude-dropdown-menu model-dropdown fade-in">
-                <div className="dropdown-section-title">Select AI Model</div>
-                {AVAILABLE_MODELS.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className={`dropdown-menu-item ${currentModelId === m.id ? "selected" : ""}`}
-                    onClick={() => {
-                      handleSelectModel(m.id);
-                      setShowModelMenu(false);
-                    }}
-                  >
-                    <div className="model-item-text">
-                      <span className="model-item-name">{m.name}</span>
-                      <span className="model-item-badge">{m.badge}</span>
-                    </div>
-                    {currentModelId === m.id && <Check size={14} className="text-accent" />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="mobile-dropdown-backdrop"
+                  onClick={() => setShowModelMenu(false)}
+                />
+                <div className="claude-dropdown-menu model-dropdown fade-in">
+                  <div className="mobile-sheet-handle" />
+                  <div className="dropdown-section-title">Select AI Model</div>
+                  {AVAILABLE_MODELS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={`dropdown-menu-item ${currentModelId === m.id ? "selected" : ""}`}
+                      onClick={() => {
+                        handleSelectModel(m.id);
+                        setShowModelMenu(false);
+                      }}
+                    >
+                      <div className="model-item-text">
+                        <span className="model-item-name">{m.name}</span>
+                        <span className="model-item-badge">{m.badge}</span>
+                      </div>
+                      {currentModelId === m.id && <Check size={15} className="text-accent model-check-icon" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -736,18 +880,6 @@ export default function ChatArea({
   // Sleek single-line compact composer when conversation has started
   const renderCompactComposer = () => (
     <div className="claude-compact-composer">
-      <input
-        type="file"
-        ref={imageInputRef}
-        style={{ display: "none" }}
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            handleImageFile(e.target.files[0]);
-          }
-        }}
-      />
-
       {/* Left: Plus attachment button */}
       <div className="attach-menu-wrapper" ref={attachMenuRef}>
         <button
@@ -770,18 +902,18 @@ export default function ChatArea({
               }}
             >
               <ImageIcon size={15} />
-              <span>Attach Image (Vision)</span>
+              <span>Attach Image</span>
             </button>
             <button
               type="button"
               className="dropdown-menu-item"
               onClick={() => {
                 setShowAttachMenu(false);
-                onAttachClick();
+                docInputRef.current?.click();
               }}
             >
               <FileText size={15} />
-              <span>Upload Document (RAG)</span>
+              <span>Upload Document</span>
             </button>
           </div>
         )}
@@ -823,32 +955,39 @@ export default function ChatArea({
             title="Select AI Model"
           >
             <span className="compact-model-name">
-              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash Lite"}
+              {AVAILABLE_MODELS.find((m) => m.id === currentModelId)?.name || "Gemini 3.5 Flash"}
             </span>
             <ChevronDown size={11} className="model-caret" />
           </button>
 
           {showModelMenu && (
-            <div className="claude-dropdown-menu model-dropdown fade-in">
-              <div className="dropdown-section-title">Select AI Model</div>
-              {AVAILABLE_MODELS.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`dropdown-menu-item ${currentModelId === m.id ? "selected" : ""}`}
-                  onClick={() => {
-                    handleSelectModel(m.id);
-                    setShowModelMenu(false);
-                  }}
-                >
-                  <div className="model-item-text">
-                    <span className="model-item-name">{m.name}</span>
-                    <span className="model-item-badge">{m.badge}</span>
-                  </div>
-                  {currentModelId === m.id && <Check size={14} className="text-accent" />}
-                </button>
-              ))}
-            </div>
+            <>
+              <div
+                className="mobile-dropdown-backdrop"
+                onClick={() => setShowModelMenu(false)}
+              />
+              <div className="claude-dropdown-menu model-dropdown fade-in">
+                <div className="mobile-sheet-handle" />
+                <div className="dropdown-section-title">Select AI Model</div>
+                {AVAILABLE_MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`dropdown-menu-item ${currentModelId === m.id ? "selected" : ""}`}
+                    onClick={() => {
+                      handleSelectModel(m.id);
+                      setShowModelMenu(false);
+                    }}
+                  >
+                    <div className="model-item-text">
+                      <span className="model-item-name">{m.name}</span>
+                      <span className="model-item-badge">{m.badge}</span>
+                    </div>
+                    {currentModelId === m.id && <Check size={15} className="text-accent model-check-icon" />}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -944,6 +1083,32 @@ export default function ChatArea({
 
   return (
     <main className={`chat-main ${messages.length === 0 ? "is-empty-layout" : ""}`}>
+      {/* Hidden File Inputs for Image & Document Attachments */}
+      <input
+        type="file"
+        ref={imageInputRef}
+        style={{ display: "none" }}
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        onChange={(e) => {
+          if (e.target.files?.[0]) {
+            handleImageFile(e.target.files[0]);
+            e.target.value = "";
+          }
+        }}
+      />
+      <input
+        type="file"
+        ref={docInputRef}
+        style={{ display: "none" }}
+        accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.tsv,.txt,.md,.markdown,.json,.yaml,.yml,.xml,.py,.js,.jsx,.ts,.tsx,.html,.css,.sql"
+        onChange={(e) => {
+          if (e.target.files?.[0]) {
+            handleDocFile(e.target.files[0]);
+            e.target.value = "";
+          }
+        }}
+      />
+
       {/* Top Bar */}
       <header className="chat-header">
         <div className="header-left">
@@ -983,6 +1148,16 @@ export default function ChatArea({
           >
             <Layers size={14} className="text-accent" />
             <span className="hide-on-mobile">Studio</span>
+          </button>
+
+          {/* Interactive Slides & Presentations Launcher */}
+          <button
+            className="btn-header-tool btn-slides-launcher"
+            onClick={() => onOpenSlideDeck && onOpenSlideDeck()}
+            title="Interactive Slides & PowerPoint Presentation Builder"
+          >
+            <Presentation size={14} className="text-orange" />
+            <span className="hide-on-mobile">Slides</span>
           </button>
 
           {/* Custom Instructions */}
@@ -1059,10 +1234,10 @@ export default function ChatArea({
       >
         {messages.length === 0 ? (
           <div className="claude-empty-container fade-in">
-            {/* Claude-style Hero Header */}
+            {/* Claude-style Hero Header with Creative Greeting */}
             <div className="claude-hero-header">
               <NeonBrandIcon size={26} />
-              <h1 className="claude-serif-title">{timeHeading}</h1>
+              <h1 className="claude-serif-title">{heroHeading}</h1>
             </div>
 
             {/* Centered Composer Card */}
@@ -1101,12 +1276,14 @@ export default function ChatArea({
                   onContinueGenerating={onContinueGenerating}
                   loading={loading}
                   onOpenStudio={onOpenStudio}
+                  onOpenSlideDeck={onOpenSlideDeck}
+                  onOpenArtifact={onOpenArtifact}
                 />
               </MessageItemErrorBoundary>
             ))}
 
             {loading && messages[messages.length - 1]?.role !== "assistant" && (
-              <div className="message-row assistant fade-in">
+              <div className="message-row assistant">
                 <div className="message-avatar thinking-avatar">
                   <img src="/logo.png" alt="JohnGPT" className="message-bot-logo" />
                 </div>
@@ -1150,6 +1327,31 @@ export default function ChatArea({
                   <Play size={12} fill="currentColor" />
                   <span>Continue generating</span>
                 </button>
+              </div>
+            )}
+            {isUploadingDoc && (
+              <div className="attached-doc-compact-chip is-uploading fade-in">
+                <FileText size={13} className="spinning" />
+                <span>Uploading document...</span>
+              </div>
+            )}
+            {selectedDoc && !isUploadingDoc && (
+              <div className="attached-doc-compact-chip fade-in">
+                <FileText size={13} />
+                <span className="compact-chip-name" title={selectedDoc.filename}>{selectedDoc.filename}</span>
+                <button
+                  type="button"
+                  className="btn-remove-chip"
+                  onClick={onClearSelectedDoc}
+                  title="Remove attached document"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+            {uploadDocError && (
+              <div className="doc-upload-error-pill fade-in">
+                <span>⚠️ {uploadDocError}</span>
               </div>
             )}
             {attachedImage && (

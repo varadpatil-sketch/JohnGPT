@@ -2,9 +2,11 @@ import re
 from pathlib import Path
 
 SUPPORTED_EXTENSIONS = {
-    # Rich documents
+    # Rich documents & Spreadsheets
     ".pdf",
     ".docx",
+    ".xlsx",
+    ".xls",
     # Text & Markdown
     ".txt",
     ".md",
@@ -59,10 +61,15 @@ def validate_document(filename: str, content: bytes) -> tuple[str, str]:
         if not content.startswith(b"%PDF-"):
             raise ValueError("Uploaded file is not a valid PDF.")
 
-    elif ext == ".docx":
-        # DOCX is a zip package starting with PK\x03\x04
+    elif ext in {".docx", ".xlsx"}:
+        # DOCX and XLSX are zip packages starting with PK\x03\x04
         if not content.startswith(b"PK\x03\x04"):
-            raise ValueError("Uploaded file is not a valid Word document (.docx).")
+            raise ValueError(f"Uploaded file is not a valid {ext} document.")
+
+    elif ext == ".xls":
+        # Legacy Excel or Excel XML spreadsheet
+        if not (content.startswith(b"\xd0\xcf\x11\xe0") or b"<Workbook" in content[:200]):
+            raise ValueError("Uploaded file is not a valid Excel (.xls) document.")
 
     else:
         # Text, Code, CSV, JSON check - must be decodable text

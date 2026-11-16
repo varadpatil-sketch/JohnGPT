@@ -94,6 +94,76 @@ def extract_chunks(content: bytes, filename: str) -> list[tuple[str, int]]:
         for idx, chunk in enumerate(chunks):
             items.append((chunk, idx + 1))
 
+    # 2.5 Excel Spreadsheets (.xlsx, .xls)
+    elif ext in {".xlsx", ".xls"}:
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
+            for sheetname in wb.sheetnames:
+                ws = wb[sheetname]
+                sheet_rows = []
+                for row in ws.iter_rows(values_only=True):
+                    row_vals = [str(c).strip() for c in row if c is not None and str(c).strip()]
+                    if row_vals:
+                        sheet_rows.append(row_vals)
+                if sheet_rows:
+                    headers = sheet_rows[0]
+                    header_str = " | ".join(headers)
+                    data_rows = sheet_rows[1:] if len(sheet_rows) > 1 else sheet_rows
+                    step = 10
+                    for i in range(0, len(data_rows), step):
+                        chunk_rows = data_rows[i:i + step]
+                        lines = [f"[Sheet: {sheetname}] Header: {header_str}"]
+                        for r in chunk_rows:
+                            lines.append("Row: " + " | ".join(r))
+                        chunk_text = "\n".join(lines)
+                        items.append((chunk_text, (i // step) + 1))
+        except Exception:
+            # Fallback for .xlsx using standard library zipfile + ElementTree
+            import zipfile
+            import xml.etree.ElementTree as ET
+            try:
+                with zipfile.ZipFile(io.BytesIO(content)) as z:
+                    shared_strings = []
+                    if "xl/sharedStrings.xml" in z.namelist():
+                        tree = ET.fromstring(z.read("xl/sharedStrings.xml"))
+                        for si in tree.findall(".//{*}si"):
+                            t = si.find(".//{*}t")
+                            shared_strings.append(t.text if t is not None and t.text else "")
+
+                    sheet_files = [f for f in z.namelist() if f.startswith("xl/worksheets/sheet") and f.endswith(".xml")]
+                    for sheet_idx, sheet_file in enumerate(sheet_files):
+                        sheet_tree = ET.fromstring(z.read(sheet_file))
+                        sheet_rows = []
+                        for row in sheet_tree.findall(".//{*}row"):
+                            current_row = []
+                            for c in row.findall(".//{*}c"):
+                                cell_type = c.get("t")
+                                val_elem = c.find(".//{*}v")
+                                val = val_elem.text if val_elem is not None else ""
+                                if cell_type == "s" and val.isdigit():
+                                    idx = int(val)
+                                    val = shared_strings[idx] if idx < len(shared_strings) else val
+                                if val:
+                                    current_row.append(val.strip())
+                            if current_row:
+                                sheet_rows.append(current_row)
+
+                        if sheet_rows:
+                            headers = sheet_rows[0]
+                            header_str = " | ".join(headers)
+                            data_rows = sheet_rows[1:] if len(sheet_rows) > 1 else sheet_rows
+                            step = 10
+                            for i in range(0, len(data_rows), step):
+                                chunk_rows = data_rows[i:i + step]
+                                lines = [f"[Sheet {sheet_idx + 1}] Header: {header_str}"]
+                                for r in chunk_rows:
+                                    lines.append("Row: " + " | ".join(r))
+                                chunk_text = "\n".join(lines)
+                                items.append((chunk_text, (i // step) + 1))
+            except Exception as e:
+                print(f"Excel parsing fallback error: {e}")
+
     # 3. CSV / TSV Tabular Data
     elif ext in {".csv", ".tsv"}:
         delimiter = "\t" if ext == ".tsv" else ","

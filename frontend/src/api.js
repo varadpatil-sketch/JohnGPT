@@ -83,9 +83,10 @@ export async function sendChatMessage({
   custom_instructions = null,
   model = null,
 }) {
+  const cleanSessionId = (session_id || "").trim() || `session-${Date.now().toString(36)}`;
   const payload = {
     message,
-    session_id,
+    session_id: cleanSessionId,
   };
   if (document_id) {
     payload.document_id = document_id;
@@ -131,9 +132,10 @@ export async function streamChatMessage({
   onDone,
   onError,
 }) {
+  const cleanSessionId = (session_id || "").trim() || `session-${Date.now().toString(36)}`;
   const payload = {
     message,
-    session_id,
+    session_id: cleanSessionId,
   };
   if (document_id) {
     payload.document_id = document_id;
@@ -159,8 +161,22 @@ export async function streamChatMessage({
   });
 
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({ detail: "Chat stream failed" }));
-    throw new Error(errData.detail || `Server returned ${res.status}`);
+    let errorMsg = `Server returned ${res.status}`;
+    try {
+      const errData = await res.json();
+      if (typeof errData?.detail === "string") {
+        errorMsg = errData.detail;
+      } else if (errData?.detail && typeof errData.detail === "object") {
+        errorMsg = errData.detail.message || JSON.stringify(errData.detail);
+      } else if (typeof errData?.error === "string") {
+        errorMsg = errData.error;
+      } else if (errData?.error?.message) {
+        errorMsg = errData.error.message;
+      } else if (errData) {
+        errorMsg = JSON.stringify(errData);
+      }
+    } catch (_) {}
+    throw new Error(errorMsg);
   }
 
   const reader = res.body.getReader();
@@ -180,19 +196,30 @@ export async function streamChatMessage({
         const line = raw.trim();
         if (!line || !line.startsWith("data: ")) continue;
         const jsonStr = line.replace(/^data:\s*/, "");
+        let event = null;
         try {
-          const event = JSON.parse(jsonStr);
-          if (event.type === "token") {
-            if (onToken) onToken(event.text);
-          } else if (event.type === "tool_start" || event.type === "tool_done") {
-            if (onTool) onTool(event);
-          } else if (event.type === "done") {
-            if (onDone) onDone(event);
-          } else if (event.type === "error") {
-            if (onError) onError(new Error(event.error));
-          }
+          event = JSON.parse(jsonStr);
         } catch (e) {
           console.warn("Could not parse SSE JSON:", jsonStr, e);
+          continue;
+        }
+
+        if (event.type === "token") {
+          if (onToken) onToken(event.text);
+        } else if (event.type === "tool_start" || event.type === "tool_done") {
+          if (onTool) onTool(event);
+        } else if (event.type === "done") {
+          if (onDone) onDone(event);
+        } else if (event.type === "error") {
+          let errorText = "Streaming error encountered";
+          if (typeof event.error === "string") {
+            errorText = event.error;
+          } else if (event.error && typeof event.error === "object") {
+            errorText = event.error.message || event.error.detail || JSON.stringify(event.error);
+          }
+          const errObj = new Error(errorText);
+          if (onError) onError(errObj);
+          throw errObj;
         }
       }
     }

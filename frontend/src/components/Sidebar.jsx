@@ -15,6 +15,7 @@ import {
   Check,
   X,
   Palette,
+  Presentation,
 } from "lucide-react";
 
 export default function Sidebar({
@@ -29,6 +30,7 @@ export default function Sidebar({
   onOpenArtifacts,
   onOpenCode,
   onOpenCreate,
+  onOpenSlides,
   onOpenChat,
   onOpenCustomInstructions,
   onCloseMobile,
@@ -190,6 +192,21 @@ export default function Sidebar({
         >
           <Copy size={18} className="nav-item-icon" />
           <span className="nav-item-label">Artifacts</span>
+        </button>
+
+        {/* Slides (Interactive Presentations) */}
+        <button
+          type="button"
+          className={`sidebar-nav-item ${activeNav === "slides" ? "active" : ""}`}
+          onClick={() => {
+            setActiveNav("slides");
+            if (onOpenSlides) onOpenSlides();
+            else if (onOpenArtifacts) onOpenArtifacts();
+          }}
+          title="Interactive Presentations & PowerPoint Generator"
+        >
+          <Presentation size={18} className="nav-item-icon text-orange" />
+          <span className="nav-item-label">Slides</span>
         </button>
 
         {/* Customize */}

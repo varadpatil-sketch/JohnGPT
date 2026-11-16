@@ -781,18 +781,28 @@ Design rules:
         onError: (err) => {
           console.error("Code generation stream failed:", err);
           setBuildingStage("ready");
+          const errText = typeof err === "string" 
+            ? err 
+            : (err?.message && err.message !== "[object Object]" 
+                ? err.message 
+                : (err?.detail || "Failed to generate code."));
           setGenerationLogs((prev) => [
             ...prev,
-            { role: "error", text: `Error: ${err.message || "Failed to generate code."}` },
+            { role: "error", text: `Error: ${errText}` },
           ]);
         },
       });
     } catch (err) {
       setBuildingStage("ready");
       if (err.name !== "AbortError") {
+        const errText = typeof err === "string" 
+          ? err 
+          : (err?.message && err.message !== "[object Object]" 
+              ? err.message 
+              : (err?.detail || "Failed to generate code."));
         setGenerationLogs((prev) => [
           ...prev,
-          { role: "error", text: `Error: ${err.message || "Failed to generate code."}` },
+          { role: "error", text: `Error: ${errText}` },
         ]);
       }
     } finally {
@@ -1015,10 +1025,10 @@ Design rules:
                     setEditTitleText(currentProject.title || "New Web Project");
                     setIsEditingTitle(true);
                   }}
-                  title="Rename current project"
+                  title="Rename project"
+                  aria-label="Rename project"
                 >
-                  <Edit2 size={13} />
-                  <span>Rename</span>
+                  <Edit2 size={14} />
                 </button>
               </>
             )}
@@ -1031,10 +1041,10 @@ Design rules:
                 setNewProjectStarter("blank");
                 setShowNewProjectModal(true);
               }}
-              title="Create new project"
+              title="New project"
+              aria-label="New project"
             >
-              <Plus size={14} />
-              <span>New</span>
+              <Plus size={15} />
             </button>
 
             <button

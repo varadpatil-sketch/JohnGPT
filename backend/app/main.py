@@ -282,6 +282,14 @@ def chat(request: ChatRequest):
             detail="Message cannot be empty.",
         )
 
+    # Ensure a valid non-empty session ID is always assigned
+    session_id = (request.session_id or "").strip()
+    if not session_id:
+        import uuid
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        request.session_id = session_id
+    create_or_get_session(session_id)
+
     try:
         document_id = validate_document_id(request.document_id)
     except ValueError as error:
@@ -299,18 +307,29 @@ def chat(request: ChatRequest):
     )
 
     try:
-        # Rewrite follow-up questions for better document retrieval.
-        search_query = rewrite_query(
-            message=message,
-            history_text=history_text,
-        )
+        # Fast-path for simple greetings to avoid unnecessary LLM rewrite and RAG search
+        cleaned_msg = message.strip().lower().rstrip("!.?")
+        is_greeting = cleaned_msg in {
+            "hello", "hi", "hey", "hola", "sup", "good morning", "good evening", "good afternoon", "howdy", "greetings"
+        }
 
-        # Retrieve relevant passages from the indexed PDFs.
-        passages = retrieve(
-            query=search_query,
-            document_id=document_id,
-            top_k=5,
-        )
+        if is_greeting or not history_text.strip():
+            search_query = message
+        else:
+            search_query = rewrite_query(
+                message=message,
+                history_text=history_text,
+            )
+
+        if is_greeting and not document_id:
+            passages = []
+        else:
+            # Retrieve relevant passages from the indexed PDFs.
+            passages = retrieve(
+                query=search_query,
+                document_id=document_id,
+                top_k=5,
+            )
 
         show_sources = user_requested_sources(message)
         context_parts = []
@@ -409,6 +428,14 @@ def chat_stream(request: ChatRequest):
             detail="Message cannot be empty.",
         )
 
+    # Ensure a valid non-empty session ID is always assigned
+    session_id = (request.session_id or "").strip()
+    if not session_id:
+        import uuid
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        request.session_id = session_id
+    create_or_get_session(session_id)
+
     try:
         document_id = validate_document_id(request.document_id)
     except ValueError as error:
@@ -426,18 +453,29 @@ def chat_stream(request: ChatRequest):
     )
 
     try:
-        # Rewrite follow-up questions for better document retrieval.
-        search_query = rewrite_query(
-            message=message,
-            history_text=history_text,
-        )
+        # Fast-path for simple greetings to avoid unnecessary LLM rewrite and RAG search
+        cleaned_msg = message.strip().lower().rstrip("!.?")
+        is_greeting = cleaned_msg in {
+            "hello", "hi", "hey", "hola", "sup", "good morning", "good evening", "good afternoon", "howdy", "greetings"
+        }
 
-        # Retrieve relevant passages from the indexed documents.
-        passages = retrieve(
-            query=search_query,
-            document_id=document_id,
-            top_k=5,
-        )
+        if is_greeting or not history_text.strip():
+            search_query = message
+        else:
+            search_query = rewrite_query(
+                message=message,
+                history_text=history_text,
+            )
+
+        if is_greeting and not document_id:
+            passages = []
+        else:
+            # Retrieve relevant passages from the indexed documents.
+            passages = retrieve(
+                query=search_query,
+                document_id=document_id,
+                top_k=5,
+            )
 
         show_sources = user_requested_sources(message)
         context_parts = []
@@ -537,11 +575,15 @@ def chat_stream(request: ChatRequest):
         except Exception as err:
             err_msg = str(err)
             print(f"Streaming error: {err_msg}")
-            friendly_err = (
-                "The connection to the AI model was momentarily interrupted. Please click 'Regenerate' to resume."
-                if any(k in err_msg.lower() for k in ("wsarecv", "forcibly closed", "stream reading error", "remote host"))
-                else err_msg
-            )
+            low = err_msg.lower()
+            if any(k in low for k in ("wsarecv", "forcibly closed", "stream reading error", "remote host", "connection", "reset by peer")):
+                friendly_err = "The connection to the AI model was momentarily interrupted. Please tap 'Regenerate' to resume."
+            elif any(k in low for k in ("429", "quota", "resource_exhausted", "limit exceeded", "rate limit")):
+                friendly_err = "AI service rate limit reached. Please tap 'Regenerate' in a moment or select Gemini 3.5 Flash Lite."
+            elif "not_found" in low or "404" in low:
+                friendly_err = "The requested AI model is temporarily unavailable. Please tap 'Regenerate' to try another model."
+            else:
+                friendly_err = err_msg or "Failed to stream AI response."
             yield f"data: {json.dumps({'type': 'error', 'error': friendly_err})}\n\n"
 
     return StreamingResponse(
